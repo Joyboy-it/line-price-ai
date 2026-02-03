@@ -10,14 +10,15 @@ interface PriceGroupListProps {
   groups: PriceGroup[];
 }
 
-function isToday(dateString: string): boolean {
-  const date = new Date(dateString);
+function isToday(dateValue: string | Date): boolean {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
   const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
+  
+  // เปรียบเทียบแค่วันที่ (YYYY-MM-DD) โดยไม่สนเวลา
+  const dateOnly = date.toISOString().split('T')[0];
+  const todayOnly = today.toISOString().split('T')[0];
+  
+  return dateOnly === todayOnly;
 }
 
 export default function PriceGroupList({ groups }: PriceGroupListProps) {
@@ -49,7 +50,7 @@ export default function PriceGroupList({ groups }: PriceGroupListProps) {
           </div>
         ) : (
           filteredGroups.map((group) => {
-            const updatedToday = group.last_image_at && typeof group.last_image_at === 'string' && isToday(group.last_image_at);
+            const updatedToday = group.last_image_at && isToday(group.last_image_at);
             
             return (
               <Link
