@@ -4,7 +4,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
-const MAX_FILE_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || '5242880');
+const MAX_FILE_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE || '10485760');
 const ALLOWED_TYPES = (process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp').split(',');
 
 export interface UploadResult {

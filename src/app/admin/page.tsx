@@ -79,12 +79,12 @@ export default async function AdminDashboardPage() {
   ]);
 
   const quickActions = [
-    { href: '/admin/users', icon: Users, label: 'จัดการผู้ใช้', desc: 'ผู้ใช้ทั้งหมด', color: 'bg-blue-500' },
-    { href: '/admin/manage-groups', icon: Tag, label: 'จัดการกลุ่มราคา', desc: 'เพิ่ม/แก้ไขกลุ่ม', color: 'bg-green-500' },
-    { href: '/admin/announcements', icon: Megaphone, label: 'จัดการประกาศ', desc: 'ประกาศข่าวสาร', color: 'bg-purple-500' },
-    { href: '/admin/price-images', icon: ImageIcon, label: 'จัดการรูปภาพราคา', desc: 'อัปโหลดรูปภาพ', color: 'bg-orange-500' },
-    { href: '/admin/logs', icon: FileText, label: 'ประวัติใช้งาน', desc: 'ดูประวัติการใช้งาน', color: 'bg-gray-500' },
-    { href: '/admin/analytics', icon: BarChart3, label: 'Analytics Dashboard', desc: 'สถิติและรายงาน', color: 'bg-teal-500' },
+    { href: '/admin/users', icon: Users, label: 'จัดการผู้ใช้', desc: 'ผู้ใช้งานในระบบ', bgColor: 'bg-blue-50', borderColor: 'border-blue-100', iconColor: 'text-blue-600' },
+    { href: '/admin/manage-groups', icon: Tag, label: 'จัดการกลุ่มราคา', desc: 'เพิ่ม/แก้ไข/ลบกลุ่ม', bgColor: 'bg-green-50', borderColor: 'border-green-100', iconColor: 'text-green-600' },
+    { href: '/admin/announcements', icon: Megaphone, label: 'จัดการประกาศ', desc: 'ประกาศประชาสัมพันธ์', bgColor: 'bg-purple-50', borderColor: 'border-purple-100', iconColor: 'text-purple-600' },
+    { href: '/admin/price-images', icon: ImageIcon, label: 'จัดการรูปภาพราคา', desc: 'อัปโหลด/แก้ไขรูป', bgColor: 'bg-orange-50', borderColor: 'border-orange-100', iconColor: 'text-orange-600' },
+    { href: '/admin/logs', icon: FileText, label: 'ประวัติใช้งาน', desc: 'ประวัติการใช้งาน', bgColor: 'bg-slate-50', borderColor: 'border-slate-100', iconColor: 'text-slate-600' },
+    { href: '/admin/analytics', icon: BarChart3, label: 'Analytics Dashboard', desc: 'สถิติและกราฟ', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-100', iconColor: 'text-indigo-600' },
   ];
 
   return (
@@ -101,21 +101,22 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <RefreshCw className="w-5 h-5" />
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <section className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-900">⚡ Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {quickActions.map((action) => (
             <Link
               key={action.href}
               href={action.href}
-              className={`${action.color} text-white rounded-lg p-4 hover:opacity-90 transition-opacity`}
+              className={`flex items-center gap-3 p-4 ${action.bgColor} rounded-lg border ${action.borderColor} hover:shadow-md transition`}
             >
-              <action.icon className="w-6 h-6 mb-2" />
-              <h3 className="font-medium">{action.label}</h3>
-              <p className="text-sm opacity-80">{action.desc}</p>
+              <action.icon className={`w-5 h-5 ${action.iconColor}`} />
+              <div>
+                <p className="font-medium text-gray-900 text-sm">{action.label}</p>
+                <p className="text-xs text-gray-500">{action.desc}</p>
+              </div>
             </Link>
           ))}
         </div>

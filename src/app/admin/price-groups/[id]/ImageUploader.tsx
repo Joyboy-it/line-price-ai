@@ -14,12 +14,13 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
   const [sendToTelegram, setSendToTelegram] = useState(!!telegramChatId);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const maxSize = 10 * 1024 * 1024; // 10MB
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
       
       const validFiles: File[] = [];
@@ -27,7 +28,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
       
       newFiles.forEach((file) => {
         if (file.size > maxSize) {
-          errors.push(`${file.name}: ไฟล์ใหญ่เกิน 5MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+          errors.push(`${file.name}: ไฟล์ใหญ่เกิน 10MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         } else if (!allowedTypes.includes(file.type)) {
           errors.push(`${file.name}: ประเภทไฟล์ไม่รองรับ (${file.type})`);
         } else {
@@ -47,6 +48,54 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+    
+    droppedFiles.forEach((file) => {
+      if (file.size > maxSize) {
+        errors.push(`${file.name}: ไฟล์ใหญ่เกิน 10MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      } else if (!allowedTypes.includes(file.type)) {
+        errors.push(`${file.name}: ประเภทไฟล์ไม่รองรับ (${file.type})`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    if (errors.length > 0) {
+      alert('ไม่สามารถเพิ่มไฟล์บางไฟล์:\n\n' + errors.join('\n'));
+    }
+    
+    if (validFiles.length > 0) {
+      setFiles((prev) => [...prev, ...validFiles]);
+    }
   };
 
   const handleUpload = async () => {
@@ -97,7 +146,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
           
           if (response.status === 400) {
             if (errorData.error?.includes('file size')) {
-              errorMessage = `ไฟล์ "${files[i].name}" มีขนาดใหญ่เกินกำหนด (สูงสุด 5MB)`;
+              errorMessage = `ไฟล์ "${files[i].name}" มีขนาดใหญ่เกินกำหนด (สูงสุด 10MB)`;
             } else if (errorData.error?.includes('file type') || errorData.error?.includes('mime')) {
               errorMessage = `ไฟล์ "${files[i].name}" เป็นประเภทที่ไม่รองรับ (รองรับเฉพาะ JPG, PNG, WebP)`;
             } else {
@@ -127,7 +176,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
     } catch (error) {
       console.error('Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปโหลด';
-      alert(`❌ ${errorMessage}\n\nกรุณาตรวจสอบ:\n• ขนาดไฟล์ไม่เกิน 5MB\n• ประเภทไฟล์: JPG, PNG, WebP\n• การเชื่อมต่ออินเทอร์เน็ต`);
+      alert(`❌ ${errorMessage}\n\nกรุณาตรวจสอบ:\n• ขนาดไฟล์ไม่เกิน 10MB\n• ประเภทไฟล์: JPG, PNG, WebP\n• การเชื่อมต่ออินเทอร์เน็ต`);
       setStatusMessage('');
     } finally {
       setUploading(false);
@@ -144,11 +193,19 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
       {/* Drop Zone */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          isDragging
+            ? 'border-orange-500 bg-orange-100'
+            : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50'
+        }`}
       >
         <Upload className="w-12 h-12 text-orange-400 mx-auto mb-4" />
         <p className="text-gray-600 mb-2">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวาง</p>
-        <p className="text-sm text-gray-400">รองรับ JPG, PNG, WebP (สูงสุด 5MB)</p>
+        <p className="text-sm text-gray-400">รองรับ JPG, PNG, WebP (สูงสุด 10MB)</p>
         <input
           ref={fileInputRef}
           type="file"

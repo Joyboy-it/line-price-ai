@@ -96,48 +96,54 @@ export default async function HomePage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Announcements Section - Only for approved users */}
       {accessStatus.hasAccess && announcements.length > 0 && (
-        <section className="mb-8">
+        <section className="bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl shadow-sm p-6 border border-purple-100 mb-8" style={{ minHeight: '140px' }}>
+          {/* Header with icon */}
           <div className="flex items-center gap-2 mb-4">
-            <Megaphone className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-800">ประกาศ</h2>
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Megaphone className="w-4 h-4 text-purple-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">ประกาศ</h2>
           </div>
 
+          {/* Announcements List */}
           <div className="space-y-3">
             {announcements.map((announcement) => (
               <Link
                 key={announcement.id}
                 href={`/announcements/${announcement.id}`}
-                className="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-purple-300 transition-all"
+                className="flex items-center justify-between p-4 bg-white rounded-lg hover:bg-gray-50 transition cursor-pointer border border-purple-100"
               >
-                <div className="flex gap-4">
-                  {announcement.image_path && (
-                    <div className="flex-shrink-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Icon or Image */}
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                    {announcement.image_path ? (
                       <Image
                         src={`/api/files${announcement.image_path}`}
                         alt={announcement.title}
-                        width={80}
-                        height={80}
-                        className="rounded-lg object-cover"
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
                       />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium text-gray-800 mb-1">
-                        {announcement.title}
-                      </h3>
-                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                    </div>
-                    {announcement.body && (
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                        {announcement.body}
-                      </p>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-100 to-violet-100 flex items-center justify-center">
+                        <Megaphone className="w-6 h-6 text-purple-600" />
+                      </div>
                     )}
-                    <p className="text-xs text-gray-400">
+                  </div>
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 truncate">
+                      {announcement.title}
+                    </p>
+                    <p className="text-sm text-gray-500">
                       {formatDateTime(announcement.created_at)}
                     </p>
                   </div>
                 </div>
+
+                {/* Arrow */}
+                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
               </Link>
             ))}
           </div>
