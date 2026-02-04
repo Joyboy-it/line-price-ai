@@ -31,7 +31,7 @@ export default async function PriceImagesPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Link
         href="/admin"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 mb-6"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
         กลับ
@@ -53,7 +53,7 @@ export default async function PriceImagesPage() {
         <input
           type="text"
           placeholder="ค้นหากลุ่มราคา..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
         <select className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 border border-gray-300 rounded-lg text-sm">
           <option>ทั้งหมด</option>
@@ -66,11 +66,11 @@ export default async function PriceImagesPage() {
           <Link
             key={group.id}
             href={`/admin/price-groups/${group.id}`}
-            className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-green-300 hover:shadow-sm transition-all"
+            className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-orange-300 hover:shadow-sm transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-green-600" />
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <ImageIcon className="w-5 h-5 text-orange-600" />
               </div>
               <div className="flex-1">
                 <h3 className="font-medium text-blue-600">{group.name}</h3>

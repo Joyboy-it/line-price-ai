@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { deleteFile } from '@/lib/storage';
 import { PriceGroupImage } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
+import { hasPermission } from '@/lib/permissions';
 
 export async function DELETE(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'upload_images')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

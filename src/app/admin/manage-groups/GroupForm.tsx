@@ -17,7 +17,6 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
     description: group?.description || '',
     branch_id: group?.branch_id || '',
     telegram_chat_id: group?.telegram_chat_id || '',
-    sort_order: group?.sort_order || 0,
     is_active: group?.is_active ?? true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,22 +143,6 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
           </p>
         </div>
 
-        {/* ลำดับการแสดงผล */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            ลำดับการแสดงผล
-          </label>
-          <input
-            type="number"
-            value={formData.sort_order}
-            onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            placeholder="0"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            ตัวเลขน้อยจะแสดงก่อน
-          </p>
-        </div>
 
         {/* สถานะ */}
         {group && (

@@ -13,6 +13,8 @@ import {
   Settings,
   LayoutDashboard,
   ChevronDown,
+  FolderOpen,
+  Shield,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -24,6 +26,7 @@ export default function Navbar() {
 
   const isAdmin = session?.user?.role === 'admin';
   const isOperator = session?.user?.role === 'operator';
+  const isWorker = session?.user?.role === 'worker';
 
   // Close dropdown and mobile menu when clicking outside
   useEffect(() => {
@@ -65,7 +68,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             {status === 'authenticated' && session?.user && (
               <>
-                {(isAdmin || isOperator) && (
+                {(isAdmin || isOperator || isWorker) && (
                   <Link
                     href="/admin"
                     className="flex items-center gap-1 text-gray-600 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium"
@@ -102,7 +105,7 @@ export default function Navbar() {
                         <p className="text-sm font-medium text-gray-900">{session.user.name}</p>
                         <p className="text-xs text-gray-500">{session.user.email}</p>
                       </div>
-                      {(isAdmin || isOperator) && (
+                      {(isAdmin || isOperator || isWorker) && (
                         <>
                           <Link
                             href="/admin"
@@ -112,6 +115,10 @@ export default function Navbar() {
                             <LayoutDashboard className="w-4 h-4" />
                             Dashboard
                           </Link>
+                        </>
+                      )}
+                      {(isAdmin || isOperator) && (
+                        <>
                           <Link
                             href="/admin/branches"
                             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -120,7 +127,25 @@ export default function Navbar() {
                             <MapPin className="w-4 h-4" />
                             จัดการสาขา
                           </Link>
+                          <Link
+                            href="/admin/manage-groups"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                            จัดการกลุ่มราคา
+                          </Link>
                         </>
+                      )}
+                      {isAdmin && (
+                        <Link
+                          href="/admin/roles"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <Shield className="w-4 h-4" />
+                          จัดการสิทธิ์
+                        </Link>
                       )}
                       <button
                         onClick={() => signOut()}
@@ -184,14 +209,46 @@ export default function Navbar() {
                     <p className="text-sm text-gray-500">{session.user.email}</p>
                   </div>
                 </div>
+                {(isAdmin || isOperator || isWorker) && (
+                  <>
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-5 h-5" />
+                      Dashboard
+                    </Link>
+                  </>
+                )}
                 {(isAdmin || isOperator) && (
+                  <>
+                    <Link
+                      href="/admin/branches"
+                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <MapPin className="w-5 h-5" />
+                      จัดการสาขา
+                    </Link>
+                    <Link
+                      href="/admin/manage-groups"
+                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FolderOpen className="w-5 h-5" />
+                      จัดการกลุ่มราคา
+                    </Link>
+                  </>
+                )}
+                {isAdmin && (
                   <Link
-                    href="/admin"
-                    className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                    href="/admin/roles"
+                    className="flex items-center gap-2 text-purple-600 hover:text-purple-700 py-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <LayoutDashboard className="w-5 h-5" />
-                    Dashboard
+                    <Shield className="w-5 h-5" />
+                    จัดการสิทธิ์
                   </Link>
                 )}
                 <button

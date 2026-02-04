@@ -4,11 +4,12 @@ import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_price_groups')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -27,23 +28,29 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_price_groups')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    const { name, description, branch_id, telegram_chat_id, sort_order } = body;
+    const { name, description, branch_id, telegram_chat_id } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    // สร้าง sort_order อัตโนมัติจากจำนวนกลุ่มที่มีอยู่
+    const maxSortOrder = await queryOne<{ max: number }>(
+      `SELECT COALESCE(MAX(sort_order), -1) as max FROM price_groups`
+    );
+    const nextSortOrder = (maxSortOrder?.max || 0) + 1;
+
     const newGroup = await queryOne<PriceGroup>(
       `INSERT INTO price_groups (name, description, branch_id, telegram_chat_id, sort_order)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [name, description || null, branch_id || null, telegram_chat_id || null, sort_order || 0]
+      [name, description || null, branch_id || null, telegram_chat_id || null, nextSortOrder]
     );
 
     await logActionWithIp(request, session.user.id, 'create_group', 'price_group', newGroup?.id, { name });

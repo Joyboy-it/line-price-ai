@@ -106,7 +106,7 @@ export const authOptions: NextAuthOptions = {
       console.log('Session callback - Token:', token);
       if (token && token.id) {
         session.user.id = token.id as string;
-        session.user.role = (token.role || 'user') as 'user' | 'operator' | 'admin';
+        session.user.role = (token.role || 'user') as 'user' | 'worker' | 'operator' | 'admin';
         session.user.provider_id = token.provider_id as string;
         session.user.shop_name = token.shop_name as string | undefined;
         session.user.is_active = token.is_active as boolean;

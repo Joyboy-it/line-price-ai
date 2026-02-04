@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'operator' | 'admin';
+export type UserRole = 'user' | 'worker' | 'operator' | 'admin';
 export type RequestStatus = 'pending' | 'approved' | 'rejected';
 export type LogAction = 
   | 'login' | 'logout' | 'register'

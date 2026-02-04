@@ -5,11 +5,12 @@ import { query, queryOne } from '@/lib/db';
 import { uploadFile } from '@/lib/storage';
 import { Announcement } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_announcements')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -27,7 +28,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_announcements')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

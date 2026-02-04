@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +11,7 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+    if (!session?.user || !hasPermission(session.user.role, 'manage_users')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

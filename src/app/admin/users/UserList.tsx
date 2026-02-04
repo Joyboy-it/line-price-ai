@@ -105,6 +105,8 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
         return <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">Admin</span>;
       case 'operator':
         return <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-xs font-medium">Operator</span>;
+      case 'worker':
+        return <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">Worker</span>;
       default:
         return null;
     }
@@ -143,6 +145,7 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
         >
           <option>ทั้งหมด</option>
           <option value="user">User</option>
+          <option value="worker">Worker</option>
           <option value="operator">Operator</option>
           <option value="admin">Admin</option>
         </select>
@@ -582,6 +585,7 @@ function EditUserModal({ user, onClose }: { user: UserWithGroups; onClose: () =>
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             >
               <option value="user">User</option>
+              <option value="worker">Worker</option>
               <option value="operator">Operator</option>
               <option value="admin">Admin</option>
             </select>

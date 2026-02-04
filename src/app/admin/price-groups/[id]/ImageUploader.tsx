@@ -84,6 +84,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
         formData.append('file', files[i]);
         formData.append('price_group_id', groupId);
         formData.append('send_to_telegram', sendToTelegram.toString());
+        formData.append('is_first_image', (i === 0).toString());
 
         const response = await fetch('/api/admin/upload', {
           method: 'POST',
@@ -136,16 +137,16 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <Upload className="w-5 h-5" />
+        <Upload className="w-5 h-5 text-orange-500" />
         อัปโหลดรูปภาพ
       </h2>
 
       {/* Drop Zone */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors"
+        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors"
       >
-        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <Upload className="w-12 h-12 text-orange-400 mx-auto mb-4" />
         <p className="text-gray-600 mb-2">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวาง</p>
         <p className="text-sm text-gray-400">รองรับ JPG, PNG, WebP (สูงสุด 5MB)</p>
         <input
@@ -191,7 +192,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
               type="checkbox"
               checked={sendToTelegram}
               onChange={(e) => setSendToTelegram(e.target.checked)}
-              className="w-4 h-4 text-green-500 rounded focus:ring-green-500"
+              className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
             />
             <Send className="w-4 h-4 text-blue-500" />
             <span className="text-sm text-gray-700">ส่งไปยัง Telegram</span>
@@ -204,7 +205,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
         <div className="mt-4">
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all duration-300"
+              className="h-full bg-orange-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -223,7 +224,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
       <button
         onClick={handleUpload}
         disabled={files.length === 0 || uploading}
-        className="mt-4 w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+        className="mt-4 w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
       >
         {uploading ? (
           <>

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_price_groups')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -38,7 +39,7 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_price_groups')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -75,7 +76,7 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_price_groups')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

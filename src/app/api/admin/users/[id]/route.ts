@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { User } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_users')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -35,19 +36,13 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_users')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    const { shop_name, phone, address, bank_name, bank_account, note, role, is_active } = body;
-
-    // Build bank_info JSON
-    const bank_info = bank_name || bank_account ? {
-      bank_name: bank_name || null,
-      bank_account: bank_account || null,
-    } : null;
+    const { shop_name, phone, address, bank_info, note, role, is_active } = body;
 
     // Build dynamic update query based on provided fields
     const updateFields = [];
@@ -132,7 +127,7 @@ export async function DELETE(
   const session = await getServerSession(authOptions);
   const { id } = await params;
 
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || !hasPermission(session.user.role, 'manage_users')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

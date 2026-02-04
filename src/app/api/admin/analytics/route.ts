@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 // Cache analytics data for 5 minutes
 let cachedData: any = null;
@@ -14,7 +15,7 @@ export const revalidate = 300; // 5 minutes
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'view_analytics')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

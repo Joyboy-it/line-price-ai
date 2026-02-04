@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { uploadFile } from '@/lib/storage';
-import { sendPhotoFile } from '@/lib/telegram';
 import { PriceGroup } from '@/types';
+import { sendPhotoFile, sendMessage } from '@/lib/telegram';
+import { hasPermission } from '@/lib/permissions';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { logActionWithIp } from '@/lib/log-helper';
+import { uploadFile } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
+  if (!session?.user || !hasPermission(session.user.role, 'upload_images')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const priceGroupId = formData.get('price_group_id') as string;
     const sendToTelegram = formData.get('send_to_telegram') === 'true';
+    const isFirstImage = formData.get('is_first_image') === 'true';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -61,7 +63,34 @@ export async function POST(request: NextRequest) {
 
     if (sendToTelegram && priceGroup.telegram_chat_id && uploadResult.filePath) {
       try {
-        // Read the uploaded file and send directly to Telegram
+        // ส่งข้อความหัวเฉพาะรูปแรก
+        if (isFirstImage) {
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('th-TH', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+          const timeStr = now.toLocaleTimeString('th-TH', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+          
+          const headerMessage = `📢 อัพเดทราคาวันที่ ${dateStr} ${timeStr}\n\n📸 ${priceGroup.name}`;
+          
+          const headerResult = await sendMessage(
+            priceGroup.telegram_chat_id,
+            headerMessage
+          );
+          
+          if (!headerResult.success) {
+            console.error('Failed to send header message to Telegram:', headerResult.error);
+          }
+        }
+        
+        // ส่งรูปภาพโดยไม่มี caption
         const uploadDir = process.env.UPLOAD_DIR || './uploads';
         const fullPath = path.join(uploadDir, uploadResult.filePath.replace(/^\//, ''));
         const fileBuffer = await readFile(fullPath);
@@ -69,8 +98,7 @@ export async function POST(request: NextRequest) {
         const telegramResult = await sendPhotoFile(
           priceGroup.telegram_chat_id,
           fileBuffer,
-          uploadResult.fileName || 'image.jpg',
-          `📸 ${priceGroup.name}\n\nอัปโหลดโดย: ${session.user.name}`
+          uploadResult.fileName || 'image.jpg'
         );
         
         if (!telegramResult.success) {
