@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { sendPhotoFile, sendMessage } from '@/lib/telegram';
+import { sendLineMessage, createPriceUpdateMessage } from '@/lib/line';
 import { hasPermission } from '@/lib/permissions';
 import { readFile } from 'fs/promises';
 import path from 'path';
@@ -60,6 +61,20 @@ export async function POST(request: NextRequest) {
         session.user.id,
       ]
     );
+
+    // ส่งข้อความไป LINE Group (เฉพาะรูปแรก)
+    if (isFirstImage && priceGroup.line_group_id) {
+      try {
+        const lineMessage = createPriceUpdateMessage(priceGroup.name);
+        const lineResult = await sendLineMessage(priceGroup.line_group_id, lineMessage);
+        
+        if (!lineResult.success) {
+          console.error('Failed to send message to LINE:', lineResult.error);
+        }
+      } catch (lineError) {
+        console.error('LINE send error:', lineError);
+      }
+    }
 
     if (sendToTelegram && priceGroup.telegram_chat_id && uploadResult.filePath) {
       try {

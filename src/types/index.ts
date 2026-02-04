@@ -46,6 +46,7 @@ export interface PriceGroup {
   description: string | null;
   branch_id: string | null;
   telegram_chat_id: string | null;
+  line_group_id: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: Date;

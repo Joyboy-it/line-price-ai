@@ -45,7 +45,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { name, description, branch_id, telegram_chat_id, is_active, sort_order } = body;
+    const { name, description, branch_id, telegram_chat_id, line_group_id, is_active, sort_order } = body;
 
     const updated = await queryOne<PriceGroup>(
       `UPDATE price_groups 
@@ -53,11 +53,12 @@ export async function PATCH(
            description = COALESCE($2, description),
            branch_id = $3,
            telegram_chat_id = $4,
-           is_active = COALESCE($5, is_active),
-           sort_order = COALESCE($6, sort_order)
-       WHERE id = $7
+           line_group_id = $5,
+           is_active = COALESCE($6, is_active),
+           sort_order = COALESCE($7, sort_order)
+       WHERE id = $8
        RETURNING *`,
-      [name, description, branch_id, telegram_chat_id, is_active, sort_order, id]
+      [name, description, branch_id, telegram_chat_id, line_group_id, is_active, sort_order, id]
     );
 
     await logActionWithIp(request, session.user.id, 'update_group', 'price_group', id, { name });

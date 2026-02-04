@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, description, branch_id, telegram_chat_id } = body;
+    const { name, description, branch_id, telegram_chat_id, line_group_id } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
     const nextSortOrder = (maxSortOrder?.max || 0) + 1;
 
     const newGroup = await queryOne<PriceGroup>(
-      `INSERT INTO price_groups (name, description, branch_id, telegram_chat_id, sort_order)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO price_groups (name, description, branch_id, telegram_chat_id, line_group_id, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [name, description || null, branch_id || null, telegram_chat_id || null, nextSortOrder]
+      [name, description || null, branch_id || null, telegram_chat_id || null, line_group_id || null, nextSortOrder]
     );
 
     await logActionWithIp(request, session.user.id, 'create_group', 'price_group', newGroup?.id, { name });

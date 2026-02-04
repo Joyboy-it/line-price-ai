@@ -17,6 +17,7 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
     description: group?.description || '',
     branch_id: group?.branch_id || '',
     telegram_chat_id: group?.telegram_chat_id || '',
+    line_group_id: group?.line_group_id || '',
     is_active: group?.is_active ?? true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,6 +44,7 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
           ...formData,
           branch_id: formData.branch_id || null,
           telegram_chat_id: formData.telegram_chat_id || null,
+          line_group_id: formData.line_group_id || null,
         }),
       });
 
@@ -143,6 +145,22 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
           </p>
         </div>
 
+        {/* LINE Group ID */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            LINE Group ID
+          </label>
+          <input
+            type="text"
+            value={formData.line_group_id}
+            onChange={(e) => setFormData({ ...formData, line_group_id: e.target.value })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            placeholder="เช่น C1234567890abcdef1234567890abcdef"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            ใช้สำหรับส่งข้อความแจ้งเตือนไปยังกลุ่ม LINE (ไม่ส่งรูปภาพ)
+          </p>
+        </div>
 
         {/* สถานะ */}
         {group && (
