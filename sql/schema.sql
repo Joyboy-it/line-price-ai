@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ENUM Types for better data integrity
 -- ============================================
 
-CREATE TYPE user_role AS ENUM ('user', 'operator', 'admin');
+CREATE TYPE user_role AS ENUM ('user', 'worker', 'operator', 'admin');
 CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE log_action AS ENUM (
   'login', 'logout', 'register',
