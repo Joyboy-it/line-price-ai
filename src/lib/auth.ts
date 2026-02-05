@@ -80,6 +80,7 @@ export const authOptions: NextAuthOptions = {
       console.log('JWT callback - User:', user);
       
       try {
+        // ครั้งแรกที่ login - ดึงข้อมูลจาก LINE profile
         if (user && account?.provider === 'line') {
           const dbUser = await queryOne<User>(
             'SELECT * FROM users WHERE provider = $1 AND provider_id = $2',
@@ -89,6 +90,18 @@ export const authOptions: NextAuthOptions = {
             token.id = dbUser.id;
             token.role = dbUser.role;
             token.provider_id = dbUser.provider_id;
+            token.shop_name = dbUser.shop_name;
+            token.is_active = dbUser.is_active;
+          }
+        } 
+        // ทุกครั้งที่มี token อยู่แล้ว - ดึง role ล่าสุดจาก database
+        else if (token.id) {
+          const dbUser = await queryOne<User>(
+            'SELECT role, shop_name, is_active FROM users WHERE id = $1',
+            [token.id]
+          );
+          if (dbUser) {
+            token.role = dbUser.role;
             token.shop_name = dbUser.shop_name;
             token.is_active = dbUser.is_active;
           }
