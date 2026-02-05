@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, MapPin, Edit, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { Plus, MapPin, Edit, Trash2, Search } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
 interface Branch {
@@ -55,15 +55,6 @@ export default function BranchList({ branches }: BranchListProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Back Button */}
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600 mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        กลับ
-      </Link>
-
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
