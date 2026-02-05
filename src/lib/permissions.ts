@@ -12,6 +12,7 @@ export type Permission =
   | 'view_analytics'
   | 'manage_roles';
 
+// Default permissions (ใช้ทั้ง client และ server)
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
     'view_dashboard',

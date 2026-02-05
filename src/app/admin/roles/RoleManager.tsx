@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, Users, Image, FolderOpen, MapPin, FileText, Bell, BarChart3, Check, Power, Search, Filter, ChevronRight } from 'lucide-react';
 
 interface Permission {
@@ -80,9 +80,38 @@ export default function RoleManager() {
   const [roles, setRoles] = useState<Role[]>(DEFAULT_ROLES);
   const [selectedRole, setSelectedRole] = useState<Role | null>(DEFAULT_ROLES[0]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // โหลดข้อมูลสิทธิ์จาก API
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const response = await fetch('/api/admin/roles');
+        if (!response.ok) throw new Error('Failed to fetch permissions');
+        
+        const data = await response.json();
+        
+        // อัปเดต roles ด้วยข้อมูลจาก API
+        const updatedRoles = DEFAULT_ROLES.map(role => ({
+          ...role,
+          permissions: data[role.id] || role.permissions,
+        }));
+        
+        setRoles(updatedRoles);
+        setSelectedRole(updatedRoles[0]);
+      } catch (error) {
+        console.error('Error fetching permissions:', error);
+        alert('ไม่สามารถโหลดข้อมูลสิทธิ์ได้');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPermissions();
+  }, []);
 
   const handlePermissionToggle = (roleId: string, permissionId: string) => {
     setRoles(prevRoles => {
@@ -132,11 +161,30 @@ export default function RoleManager() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // บันทึกสิทธิ์ทุก role (ยกเว้น admin)
+      const rolesToSave = roles.filter(role => role.id !== 'admin');
+      
+      for (const role of rolesToSave) {
+        const response = await fetch('/api/admin/roles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            role: role.id,
+            permissions: role.permissions,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save permissions');
+        }
+      }
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการบันทึก');
+      console.error('Error saving permissions:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึก: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
@@ -163,6 +211,17 @@ export default function RoleManager() {
     if (category === 'all') return rolePermissions.length;
     return PERMISSIONS.filter(p => p.category === category && rolePermissions.includes(p.id)).length;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">กำลังโหลดข้อมูลสิทธิ์...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
