@@ -19,8 +19,6 @@ import {
   BarChart3,
   Calendar,
   ArrowLeft,
-  MessageSquare,
-  CheckCircle,
   XCircle,
 } from 'lucide-react';
 
@@ -76,15 +74,6 @@ interface AnalyticsData {
     lastLogin: string | null;
     daysInactive: number;
   }[];
-  lineUsage: {
-    totalMessages: number;
-    thisMonth: number;
-    lastMonth: number;
-    freeQuotaRemaining: number;
-    freeQuotaLimit: number;
-    percentUsed: number;
-    error: string | null;
-  };
 }
 
 export default function AnalyticsPage() {
@@ -268,97 +257,6 @@ export default function AnalyticsPage() {
             color="bg-orange-50"
           />
         </div>
-      </section>
-
-      {/* LINE API Usage */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <MessageSquare className="w-6 h-6 text-green-600" />
-          LINE Messaging API Usage
-        </h2>
-        {data.lineUsage.error ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-yellow-800 mb-1">ไม่สามารถดึงข้อมูลการใช้งาน LINE API</h3>
-                <p className="text-sm text-yellow-700">{data.lineUsage.error}</p>
-                <p className="text-xs text-yellow-600 mt-2">
-                  ตรวจสอบว่า LINE_CHANNEL_ACCESS_TOKEN ถูกต้องใน .env.local
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-blue-600" />
-                  <p className="text-sm text-gray-600">ข้อความเดือนนี้</p>
-                </div>
-              </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-2">{data.lineUsage.thisMonth}</h3>
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    data.lineUsage.percentUsed > 80 ? 'bg-red-500' :
-                    data.lineUsage.percentUsed > 50 ? 'bg-yellow-500' :
-                    'bg-green-500'
-                  }`}
-                  style={{ width: `${Math.min(data.lineUsage.percentUsed, 100)}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500">
-                {data.lineUsage.percentUsed}% ของ Free Quota
-              </p>
-            </div>
-
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <p className="text-sm text-gray-600">Quota คงเหลือ</p>
-                </div>
-              </div>
-              <h3 className="text-3xl font-bold text-green-700 mb-2">{data.lineUsage.freeQuotaRemaining}</h3>
-              <p className="text-xs text-gray-600">
-                จาก {data.lineUsage.freeQuotaLimit} ข้อความฟรี/เดือน
-              </p>
-            </div>
-
-            <div className={`border rounded-lg p-6 ${
-              data.lineUsage.percentUsed > 80 ? 'bg-red-50 border-red-200' :
-              data.lineUsage.percentUsed > 50 ? 'bg-yellow-50 border-yellow-200' :
-              'bg-blue-50 border-blue-200'
-            }`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className={`w-5 h-5 ${
-                    data.lineUsage.percentUsed > 80 ? 'text-red-600' :
-                    data.lineUsage.percentUsed > 50 ? 'text-yellow-600' :
-                    'text-blue-600'
-                  }`} />
-                  <p className="text-sm text-gray-600">สถานะ</p>
-                </div>
-              </div>
-              <h3 className={`text-2xl font-bold mb-2 ${
-                data.lineUsage.percentUsed > 80 ? 'text-red-700' :
-                data.lineUsage.percentUsed > 50 ? 'text-yellow-700' :
-                'text-blue-700'
-              }`}>
-                {data.lineUsage.percentUsed > 80 ? '⚠️ ใกล้หมด' :
-                 data.lineUsage.percentUsed > 50 ? '⚡ ปานกลาง' :
-                 '✅ ปกติ'}
-              </h3>
-              <p className="text-xs text-gray-600">
-                {data.lineUsage.percentUsed > 80 ? 'ควรระวังการใช้งาน' :
-                 data.lineUsage.percentUsed > 50 ? 'ยังใช้งานได้ปกติ' :
-                 'ใช้งานได้อย่างสบาย'}
-              </p>
-            </div>
-          </div>
-        )}
       </section>
 
       {/* User Statistics */}
