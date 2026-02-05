@@ -6,17 +6,34 @@ import GroupList from './GroupList';
 
 async function getPriceGroups(): Promise<PriceGroup[]> {
   return query<PriceGroup>(
-    `SELECT pg.*, b.name as branch_name,
+    `SELECT pg.*,
       (SELECT COUNT(*) FROM price_group_images pgi WHERE pgi.price_group_id = pg.id) as image_count,
-      (SELECT COUNT(*) FROM user_group_access uga WHERE uga.price_group_id = pg.id) as user_count
+      (SELECT COUNT(*) FROM user_group_access uga WHERE uga.price_group_id = pg.id) as user_count,
+      CASE 
+        WHEN pg.branch_id IS NULL THEN NULL
+        WHEN pg.branch_id LIKE '%,%' THEN (
+          SELECT STRING_AGG(b.name, ', ' ORDER BY b.name)
+          FROM branches b
+          WHERE b.id::TEXT = ANY(STRING_TO_ARRAY(pg.branch_id, ','))
+        )
+        ELSE (SELECT name FROM branches WHERE id::TEXT = pg.branch_id LIMIT 1)
+      END as branch_name
      FROM price_groups pg
-     LEFT JOIN branches b ON b.id = pg.branch_id
      ORDER BY pg.sort_order, pg.name`
   );
 }
 
+async function getAllBranches() {
+  return query<{ id: string; name: string; code: string }>(
+    `SELECT id, name, code FROM branches WHERE is_active = true ORDER BY sort_order, name`
+  );
+}
+
 export default async function ManageGroupsPage() {
-  const priceGroups = await getPriceGroups();
+  const [priceGroups, branches] = await Promise.all([
+    getPriceGroups(),
+    getAllBranches(),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -47,7 +64,7 @@ export default async function ManageGroupsPage() {
         </Link>
       </div>
 
-      <GroupList groups={priceGroups} />
+      <GroupList groups={priceGroups} branches={branches} />
     </div>
   );
 }

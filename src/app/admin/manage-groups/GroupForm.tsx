@@ -15,7 +15,7 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
   const [formData, setFormData] = useState({
     name: group?.name || '',
     description: group?.description || '',
-    branch_id: group?.branch_id || '',
+    branch_ids: group?.branch_id ? group.branch_id.split(',').filter(Boolean) : [],
     telegram_chat_id: group?.telegram_chat_id || '',
     line_group_id: group?.line_group_id || '',
     is_active: group?.is_active ?? true,
@@ -42,7 +42,7 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          branch_id: formData.branch_id || null,
+          branch_id: formData.branch_ids.length > 0 ? formData.branch_ids.join(',') : null,
           telegram_chat_id: formData.telegram_chat_id || null,
           line_group_id: formData.line_group_id || null,
         }),
@@ -112,20 +112,43 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
         {/* สาขา */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            สาขา
+            สาขา (เลือกได้หลายสาขา)
           </label>
-          <select
-            value={formData.branch_id}
-            onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          >
-            <option value="">-- ไม่ระบุสาขา --</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
+          <div className="border border-gray-300 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+            {branches.length === 0 ? (
+              <p className="text-sm text-gray-500">ไม่มีสาขาในระบบ</p>
+            ) : (
+              branches.map((branch) => (
+                <label key={branch.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.branch_ids.includes(branch.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          branch_ids: [...formData.branch_ids, branch.id]
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          branch_ids: formData.branch_ids.filter(id => id !== branch.id)
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 text-green-500 rounded"
+                  />
+                  <span className="text-gray-800">{branch.name}</span>
+                  <span className="text-xs text-gray-500">({branch.code})</span>
+                </label>
+              ))
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {formData.branch_ids.length > 0 
+              ? `เลือกแล้ว ${formData.branch_ids.length} สาขา`
+              : 'ยังไม่ได้เลือกสาขา (กลุ่มนี้จะใช้ได้กับทุกสาขา)'}
+          </p>
         </div>
 
         {/* Telegram Chat ID */}

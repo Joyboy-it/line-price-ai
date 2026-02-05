@@ -14,11 +14,19 @@ export async function GET() {
   }
 
   const groups = await query<PriceGroup>(
-    `SELECT pg.*, b.name as branch_name,
+    `SELECT pg.*,
       (SELECT COUNT(*) FROM price_group_images pgi WHERE pgi.price_group_id = pg.id) as image_count,
-      (SELECT COUNT(*) FROM user_group_access uga WHERE uga.price_group_id = pg.id) as user_count
+      (SELECT COUNT(*) FROM user_group_access uga WHERE uga.price_group_id = pg.id) as user_count,
+      CASE 
+        WHEN pg.branch_id IS NULL THEN NULL
+        WHEN pg.branch_id LIKE '%,%' THEN (
+          SELECT STRING_AGG(b.name, ', ' ORDER BY b.name)
+          FROM branches b
+          WHERE b.id::TEXT = ANY(STRING_TO_ARRAY(pg.branch_id, ','))
+        )
+        ELSE (SELECT name FROM branches WHERE id::TEXT = pg.branch_id LIMIT 1)
+      END as branch_name
      FROM price_groups pg
-     LEFT JOIN branches b ON b.id = pg.branch_id
      ORDER BY pg.sort_order, pg.name`
   );
 

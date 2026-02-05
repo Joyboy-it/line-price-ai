@@ -8,10 +8,12 @@ import ConfirmModal from '@/components/ConfirmModal';
 
 interface GroupListProps {
   groups: PriceGroup[];
+  branches: { id: string; name: string; code: string }[];
 }
 
-export default function GroupList({ groups }: GroupListProps) {
+export default function GroupList({ groups, branches }: GroupListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchFilter, setBranchFilter] = useState<string>('ทั้งหมด');
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -19,10 +21,16 @@ export default function GroupList({ groups }: GroupListProps) {
     onConfirm: () => Promise<void>;
   }>({ isOpen: false, title: '', message: '', onConfirm: async () => {} });
 
-  const filteredGroups = groups.filter((group) =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredGroups = groups.filter((group) => {
+    const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesBranch = branchFilter === 'ทั้งหมด' || 
+      (group as any).branch_name?.includes(branchFilter) ||
+      (branchFilter === 'ไม่ระบุสาขา' && !(group as any).branch_name);
+    
+    return matchesSearch && matchesBranch;
+  });
 
   const handleDelete = async (groupId: string, groupName: string) => {
     setConfirmModal({
@@ -50,15 +58,30 @@ export default function GroupList({ groups }: GroupListProps) {
 
   return (
     <div>
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <input
-          type="text"
-          placeholder="ค้นหากลุ่มราคา..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-        />
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="ค้นหากลุ่มราคา..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <select
+          value={branchFilter}
+          onChange={(e) => setBranchFilter(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        >
+          <option>ทั้งหมด</option>
+          <option>ไม่ระบุสาขา</option>
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.name}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-3">
@@ -74,7 +97,7 @@ export default function GroupList({ groups }: GroupListProps) {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/admin/price-groups/${group.id}`}
+                    href={`/admin/manage-groups/${group.id}/edit`}
                     className="font-medium text-blue-600 hover:text-blue-800"
                   >
                     {group.name}
@@ -88,17 +111,26 @@ export default function GroupList({ groups }: GroupListProps) {
                 {group.description && (
                   <p className="text-sm text-gray-500">{group.description}</p>
                 )}
-                <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                <div className="mt-1 text-xs text-gray-500">
                   {(group as any).branch_name && (
-                    <span>📍 {(group as any).branch_name}</span>
+                    <div className="mb-1">
+                      <span className="font-medium">📍 สาขา:</span>
+                      <div className="ml-5 mt-0.5">
+                        {(group as any).branch_name.split(', ').map((branch: string, idx: number) => (
+                          <div key={idx} className="text-gray-600">{branch}</div>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  {(group as any).user_count !== undefined && (
-                    <span>👥 {(group as any).user_count} ผู้ใช้</span>
-                  )}
-                  {(group as any).image_count !== undefined && (
-                    <span>🖼️ {(group as any).image_count} รูป</span>
-                  )}
-                  <span>🔢 ลำดับ: {group.sort_order}</span>
+                  <div className="flex items-center gap-3">
+                    {(group as any).user_count !== undefined && (
+                      <span>👥 {(group as any).user_count} ผู้ใช้</span>
+                    )}
+                    {(group as any).image_count !== undefined && (
+                      <span>🖼️ {(group as any).image_count} รูป</span>
+                    )}
+                    <span>🔢 ลำดับ: {group.sort_order}</span>
+                  </div>
                 </div>
               </div>
             </div>
