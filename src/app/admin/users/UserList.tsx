@@ -31,6 +31,7 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
   
   // ใช้ role จาก server-side แทน useSession เพื่อแก้ปัญหา session loading
   const canManageRoles = hasPermission(currentUserRole, 'manage_roles');
+  const canToggleUserStatus = hasPermission(currentUserRole, 'toggle_user_status');
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -259,17 +260,19 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
                     <Shield className="w-5 h-5" />
                   </button>
                 )}
-                <button
-                  onClick={() => handleToggleUserStatus(user.id, user.name || 'ผู้ใช้', user.is_active)}
-                  className={`p-2 rounded-lg ${
-                    user.is_active
-                      ? 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'
-                      : 'text-green-500 hover:text-green-600 hover:bg-green-50'
-                  }`}
-                  title={user.is_active ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
-                >
-                  <Power className="w-5 h-5" />
-                </button>
+                {canToggleUserStatus && (
+                  <button
+                    onClick={() => handleToggleUserStatus(user.id, user.name || 'ผู้ใช้', user.is_active)}
+                    className={`p-2 rounded-lg ${
+                      user.is_active
+                        ? 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'
+                        : 'text-green-500 hover:text-green-600 hover:bg-green-50'
+                    }`}
+                    title={user.is_active ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
+                  >
+                    <Power className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
 

@@ -3,6 +3,7 @@ import { UserRole } from '@/types';
 export type Permission =
   | 'view_dashboard'
   | 'manage_users'
+  | 'toggle_user_status'
   | 'manage_branches'
   | 'manage_price_groups'
   | 'upload_images'
@@ -15,6 +16,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
     'view_dashboard',
     'manage_users',
+    'toggle_user_status',
     'manage_branches',
     'manage_price_groups',
     'upload_images',

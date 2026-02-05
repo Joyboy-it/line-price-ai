@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Users, Image, FolderOpen, MapPin, FileText, Bell, BarChart3, Check, X } from 'lucide-react';
+import { Shield, Users, Image, FolderOpen, MapPin, FileText, Bell, BarChart3, Check, X, Power } from 'lucide-react';
 
 interface Permission {
   id: string;
@@ -21,7 +21,8 @@ interface Role {
 
 const PERMISSIONS: Permission[] = [
   { id: 'view_dashboard', name: 'ดู Dashboard', description: 'เข้าถึงหน้า Dashboard', icon: <BarChart3 className="w-4 h-4" /> },
-  { id: 'manage_users', name: 'จัดการผู้ใช้', description: 'ดู แก้ไข ลบผู้ใช้', icon: <Users className="w-4 h-4" /> },
+  { id: 'manage_users', name: 'จัดการผู้ใช้', description: 'ดู แก้ไข ข้อมูลผู้ใช้', icon: <Users className="w-4 h-4" /> },
+  { id: 'toggle_user_status', name: 'เปิด/ปิดผู้ใช้', description: 'เปิดหรือปิดการใช้งานผู้ใช้', icon: <Power className="w-4 h-4" /> },
   { id: 'manage_branches', name: 'จัดการสาขา', description: 'เพิ่ม แก้ไข ลบสาขา', icon: <MapPin className="w-4 h-4" /> },
   { id: 'manage_price_groups', name: 'จัดการกลุ่มราคา', description: 'เพิ่ม แก้ไข ลบกลุ่มราคา', icon: <FolderOpen className="w-4 h-4" /> },
   { id: 'upload_images', name: 'อัปโหลดรูปภาพ', description: 'อัปโหลดรูปภาพราคา', icon: <Image className="w-4 h-4" /> },
