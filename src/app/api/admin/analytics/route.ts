@@ -71,8 +71,8 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive,
+          SUM(CASE WHEN u.is_active = true THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN u.is_active = false THEN 1 ELSE 0 END) as inactive,
           COUNT(DISTINCT uga.user_id) as with_access,
           COUNT(*) - COUNT(DISTINCT uga.user_id) as without_access
         FROM users u
@@ -264,15 +264,12 @@ export async function GET() {
           u.id,
           u.name,
           u.email,
-          COALESCE(ar.shop_name, '') as shop_name,
-          MAX(al.created_at) as last_login,
-          COALESCE(EXTRACT(DAY FROM NOW() - MAX(al.created_at))::int, 999) as days_inactive
+          u.shop_name,
+          u.last_login_at as last_login,
+          COALESCE(EXTRACT(DAY FROM NOW() - u.last_login_at)::int, 999) as days_inactive
         FROM users u
-        LEFT JOIN access_requests ar ON u.id = ar.user_id AND ar.status = 'approved'
-        LEFT JOIN activity_logs al ON u.id = al.user_id AND al.action = 'login'
         WHERE u.is_active = true
-        GROUP BY u.id, u.name, u.email, ar.shop_name
-        HAVING MAX(al.created_at) IS NULL OR MAX(al.created_at) < NOW() - INTERVAL '30 days'
+          AND (u.last_login_at IS NULL OR u.last_login_at < NOW() - INTERVAL '30 days')
         ORDER BY days_inactive DESC
         LIMIT 20
       `),
