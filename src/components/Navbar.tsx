@@ -20,8 +20,8 @@ import {
   Bell,
   Image as ImageIcon,
 } from 'lucide-react';
-import { hasPermission, Permission } from '@/lib/permissions';
-import { UserRole } from '@/types';
+import { Permission } from '@/lib/permissions';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -33,13 +33,9 @@ export default function Navbar() {
   const isAdmin = session?.user?.role === 'admin';
   const isOperator = session?.user?.role === 'operator';
   const isWorker = session?.user?.role === 'worker';
-  const userRole = session?.user?.role as UserRole | undefined;
-
-  // Helper function to check permissions
-  const canAccess = (permission: Permission): boolean => {
-    if (!userRole) return false;
-    return hasPermission(userRole, permission);
-  };
+  
+  // Use permissions from database
+  const { hasPermission: canAccess, isLoading: permissionsLoading } = usePermissions();
 
   // Close dropdown and mobile menu when clicking outside
   useEffect(() => {

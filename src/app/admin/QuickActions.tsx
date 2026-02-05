@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import {
   Users,
   Tag,
@@ -13,8 +12,8 @@ import {
   Shield,
   ClipboardCheck,
 } from 'lucide-react';
-import { hasPermission, Permission } from '@/lib/permissions';
-import { UserRole } from '@/types';
+import { Permission } from '@/lib/permissions';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface QuickAction {
   href: string;
@@ -40,14 +39,22 @@ const allQuickActions: QuickAction[] = [
 ];
 
 export default function QuickActions() {
-  const { data: session } = useSession();
-  const userRole = session?.user?.role as UserRole | undefined;
+  const { hasPermission, isLoading } = usePermissions();
 
-  // Filter actions based on user permissions
+  // Filter actions based on user permissions from database
   const filteredActions = allQuickActions.filter(action => {
-    if (!userRole) return false;
-    return hasPermission(userRole, action.permission);
+    return hasPermission(action.permission);
   });
+
+  if (isLoading) {
+    return (
+      <section className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
+        <div className="flex items-center justify-center py-8">
+          <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </section>
+    );
+  }
 
   if (filteredActions.length === 0) {
     return null;
