@@ -106,18 +106,16 @@ export default function Navbar() {
                         <p className="text-xs text-gray-500">{session.user.email}</p>
                       </div>
                       {(isAdmin || isOperator || isWorker) && (
-                        <>
-                          <Link
-                            href="/admin"
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => setIsDropdownOpen(false)}
-                          >
-                            <LayoutDashboard className="w-4 h-4" />
-                            Dashboard
-                          </Link>
-                        </>
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          Dashboard
+                        </Link>
                       )}
-                      {(isAdmin || isOperator) && (
+                      {isAdmin && (
                         <>
                           <Link
                             href="/admin/branches"
@@ -135,17 +133,15 @@ export default function Navbar() {
                             <FolderOpen className="w-4 h-4" />
                             จัดการกลุ่มราคา
                           </Link>
+                          <Link
+                            href="/admin/roles"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <Shield className="w-4 h-4" />
+                            จัดการสิทธิ์
+                          </Link>
                         </>
-                      )}
-                      {isAdmin && (
-                        <Link
-                          href="/admin/roles"
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          <Shield className="w-4 h-4" />
-                          จัดการสิทธิ์
-                        </Link>
                       )}
                       <button
                         onClick={() => signOut()}
@@ -210,18 +206,16 @@ export default function Navbar() {
                   </div>
                 </div>
                 {(isAdmin || isOperator || isWorker) && (
-                  <>
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <LayoutDashboard className="w-5 h-5" />
-                      Dashboard
-                    </Link>
-                  </>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="w-5 h-5" />
+                    Dashboard
+                  </Link>
                 )}
-                {(isAdmin || isOperator) && (
+                {isAdmin && (
                   <>
                     <Link
                       href="/admin/branches"
@@ -239,17 +233,15 @@ export default function Navbar() {
                       <FolderOpen className="w-5 h-5" />
                       จัดการกลุ่มราคา
                     </Link>
+                    <Link
+                      href="/admin/roles"
+                      className="flex items-center gap-2 text-purple-600 hover:text-purple-700 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Shield className="w-5 h-5" />
+                      จัดการสิทธิ์
+                    </Link>
                   </>
-                )}
-                {isAdmin && (
-                  <Link
-                    href="/admin/roles"
-                    className="flex items-center gap-2 text-purple-600 hover:text-purple-700 py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Shield className="w-5 h-5" />
-                    จัดการสิทธิ์
-                  </Link>
                 )}
                 <button
                   onClick={() => signOut()}
