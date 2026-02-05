@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Trash2, X, User as UserIcon } from 'lucide-react';
 import { User, PriceGroup } from '@/types';
+import { hasPermission } from '@/lib/permissions';
 
 interface UserWithGroups extends User {
   groups: PriceGroup[];
@@ -18,6 +20,7 @@ interface UserListProps {
 }
 
 export default function UserList({ users, priceGroups, branches }: UserListProps) {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState<string>('ทั้งหมด');
   const [roleFilter, setRoleFilter] = useState<string>('ทั้งหมด');
@@ -26,6 +29,8 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  const canManageRoles = session?.user?.role ? hasPermission(session.user.role, 'manage_roles') : false;
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -338,12 +343,10 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
       )}
 
       {showEditModal && selectedUser && (
-        <EditUserModal
-          user={selectedUser}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedUser(null);
-          }}
+        <EditUserModal 
+          user={selectedUser} 
+          onClose={() => setShowEditModal(false)} 
+          canManageRoles={canManageRoles}
         />
       )}
     </div>
@@ -534,7 +537,7 @@ function BranchModal({ user, branches, onClose }: { user: UserWithGroups; branch
 }
 
 // Edit User Modal Component
-function EditUserModal({ user, onClose }: { user: UserWithGroups; onClose: () => void }) {
+function EditUserModal({ user, onClose, canManageRoles }: { user: UserWithGroups; onClose: () => void; canManageRoles: boolean }) {
   const [formData, setFormData] = useState({
     role: user.role,
     is_active: user.is_active,
@@ -582,13 +585,17 @@ function EditUserModal({ user, onClose }: { user: UserWithGroups; onClose: () =>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              disabled={!canManageRoles}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <option value="user">User</option>
               <option value="worker">Worker</option>
               <option value="operator">Operator</option>
               <option value="admin">Admin</option>
             </select>
+            {!canManageRoles && (
+              <p className="text-xs text-gray-500 mt-1">⚠️ คุณไม่มีสิทธิ์แก้ไขบทบาทผู้ใช้</p>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
