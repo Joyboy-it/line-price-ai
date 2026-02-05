@@ -15,6 +15,7 @@ import {
 import { DashboardStats, AccessRequest, User } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 import QuickActions from './QuickActions';
+import LineUsage from './LineUsage';
 
 async function getDashboardStats(): Promise<DashboardStats> {
   const [pending, approved, users, groups, activeGroups, images] = await Promise.all([
@@ -85,6 +86,9 @@ export default async function AdminDashboardPage() {
 
       {/* Quick Actions - Client Component with permission check */}
       <QuickActions />
+
+      {/* LINE Usage - Client Component */}
+      <LineUsage />
 
       {/* Stats */}
       <section className="mb-8">
