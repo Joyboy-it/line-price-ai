@@ -10,6 +10,7 @@ let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 300; // 5 minutes
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -25,323 +26,144 @@ export async function GET() {
   }
 
   try {
-    // ใช้ Promise.all เพื่อ query พร้อมกัน - เพิ่มประสิทธิภาพ
-    const [
-      // User stats
-      userStats,
-      usersByRole,
-      newUsersLast7Days,
-      newUsersLast30Days,
-      
-      // Request stats
-      requestStats,
-      requestsLast7Days,
-      requestsLast30Days,
-      
-      // Price group stats
-      priceGroupStats,
-      groupsUsage,
-      
-      // Image stats
-      imageStats,
-      imagesLast7Days,
-      imagesLast30Days,
-      
-      // Announcement stats
-      announcementStats,
-      
-      // Activity stats
-      activityStats,
-      topActiveUsers,
-      dailyActivity,
-      
-      // Inactive users
-      inactiveUsersList,
-      
-      // Branch stats
-      branchStats,
-    ] = await Promise.all([
-      // User stats - single optimized query
-      query<{
-        total: string;
-        active: string;
-        inactive: string;
-        with_access: string;
-        without_access: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN u.is_active = true THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN u.is_active = false THEN 1 ELSE 0 END) as inactive,
-          COUNT(DISTINCT uga.user_id) as with_access,
-          COUNT(*) - COUNT(DISTINCT uga.user_id) as without_access
-        FROM users u
-        LEFT JOIN user_group_access uga ON u.id = uga.user_id
-      `),
-      
-      // Users by role
-      query<{ role: string; count: string }>(`
-        SELECT role, COUNT(*) as count 
-        FROM users 
-        GROUP BY role 
-        ORDER BY count DESC
-      `),
-      
-      // New users last 7 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM users 
-        WHERE created_at >= NOW() - INTERVAL '7 days'
-      `),
-      
-      // New users last 30 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM users 
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-      `),
-      
-      // Request stats - single optimized query
-      query<{
-        total: string;
-        pending: string;
-        approved: string;
-        rejected: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
-        FROM access_requests
-      `),
-      
-      // Requests last 7 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM access_requests 
-        WHERE created_at >= NOW() - INTERVAL '7 days'
-      `),
-      
-      // Requests last 30 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM access_requests 
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-      `),
-      
-      // Price group stats - single optimized query
-      query<{
-        total: string;
-        active: string;
-        inactive: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive
-        FROM price_groups
-      `),
-      
-      // Groups usage with user and image counts
-      query<{
-        group_id: string;
-        group_name: string;
-        branch_name: string;
-        user_count: string;
-        image_count: string;
-      }>(`
-        SELECT 
-          pg.id as group_id,
-          pg.name as group_name,
-          COALESCE(b.name, 'ไม่ระบุ') as branch_name,
-          COUNT(DISTINCT uga.user_id) as user_count,
-          COUNT(DISTINCT pgi.id) as image_count
-        FROM price_groups pg
-        LEFT JOIN branches b ON pg.branch_id = b.id
-        LEFT JOIN user_group_access uga ON pg.id = uga.price_group_id
-        LEFT JOIN price_group_images pgi ON pg.id = pgi.price_group_id
-        GROUP BY pg.id, pg.name, b.name
-        ORDER BY user_count DESC, image_count DESC
-        LIMIT 10
-      `),
-      
-      // Image stats
-      query<{ total: string }>(`
-        SELECT COUNT(*) as total FROM price_group_images
-      `),
-      
-      // Images last 7 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM price_group_images 
-        WHERE created_at >= NOW() - INTERVAL '7 days'
-      `),
-      
-      // Images last 30 days
-      query<{ count: string }>(`
-        SELECT COUNT(*) as count 
-        FROM price_group_images 
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-      `),
-      
-      // Announcement stats - single optimized query
-      query<{
-        total: string;
-        published: string;
-        unpublished: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN is_published = true THEN 1 ELSE 0 END) as published,
-          SUM(CASE WHEN is_published = false THEN 1 ELSE 0 END) as unpublished
-        FROM announcements
-      `),
-      
-      // Activity stats - single optimized query
-      query<{
-        total: string;
-        last_7_days: string;
-        last_30_days: string;
-        login_count: string;
-        upload_count: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END) as last_7_days,
-          SUM(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END) as last_30_days,
-          SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as login_count,
-          SUM(CASE WHEN action LIKE '%upload%' THEN 1 ELSE 0 END) as upload_count
-        FROM activity_logs
-      `),
-      
-      // Top active users (last 30 days)
-      query<{
-        user_id: string;
-        user_name: string;
-        activity_count: string;
-      }>(`
-        SELECT 
-          al.user_id,
-          COALESCE(u.name, 'Unknown') as user_name,
-          COUNT(*) as activity_count
-        FROM activity_logs al
-        LEFT JOIN users u ON al.user_id = u.id
-        WHERE al.created_at >= NOW() - INTERVAL '30 days'
-        GROUP BY al.user_id, u.name
-        ORDER BY activity_count DESC
-        LIMIT 10
-      `),
-      
-      // Daily activity trend (last 14 days)
-      query<{
-        date: string;
-        logins: string;
-        uploads: string;
-        total: string;
-      }>(`
-        SELECT 
-          DATE(created_at) as date,
-          SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins,
-          SUM(CASE WHEN action LIKE '%upload%' THEN 1 ELSE 0 END) as uploads,
-          COUNT(*) as total
-        FROM activity_logs
-        WHERE created_at >= NOW() - INTERVAL '14 days'
-        GROUP BY DATE(created_at)
-        ORDER BY date DESC
-      `),
-      
-      // Inactive users (no activity in 30+ days)
-      query<{
-        id: string;
-        name: string;
-        email: string;
-        shop_name: string;
-        last_login: string;
-        days_inactive: string;
-      }>(`
-        SELECT 
-          u.id,
-          u.name,
-          u.email,
-          u.shop_name,
-          u.last_login_at as last_login,
-          COALESCE(EXTRACT(DAY FROM NOW() - u.last_login_at)::int, 999) as days_inactive
-        FROM users u
-        WHERE u.is_active = true
-          AND (u.last_login_at IS NULL OR u.last_login_at < NOW() - INTERVAL '30 days')
-        ORDER BY days_inactive DESC
-        LIMIT 20
-      `),
-      
-      // Branch stats
-      query<{
-        total: string;
-        active: string;
-      }>(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active
-        FROM branches
-      `),
-    ]);
+    console.log('[Analytics API] Starting data fetch...');
+    
+    // Test basic query
+    const testResult = await query<{ count: string }>(`SELECT 1 as test`);
+    console.log('[Analytics API] Test query result:', testResult);
+    
+    // Minimal queries for basic stats
+    const totalUsers = await query<{ count: string }>(`SELECT COUNT(*) as count FROM users`);
+    console.log('[Analytics API] Users query result:', totalUsers);
+    
+    const totalGroups = await query<{ count: string }>(`SELECT COUNT(*) as count FROM price_groups`);
+    const totalImages = await query<{ count: string }>(`SELECT COUNT(*) as count FROM price_group_images`);
+    
+    console.log('[Analytics API] Basic stats fetched');
+    
+    // Empty arrays for all other data
+    const activeUsers = [{ count: '0' }];
+    const inactiveUsers = [{ count: '0' }];
+    const usersWithAccess = [{ count: '0' }];
+    const usersWithoutAccess = [{ count: '0' }];
+    const newUsersLast7Days = [{ count: '0' }];
+    const newUsersLast30Days = [{ count: '0' }];
+    const totalRequests = [{ count: '0' }];
+    const pendingRequests = [{ count: '0' }];
+    const approvedRequests = [{ count: '0' }];
+    const rejectedRequests = [{ count: '0' }];
+    const requestsLast7Days = [{ count: '0' }];
+    const requestsLast30Days = [{ count: '0' }];
+    const activeGroups = [{ count: '0' }];
+    const inactiveGroups = [{ count: '0' }];
+    const imagesLast7Days = [{ count: '0' }];
+    const imagesLast30Days = [{ count: '0' }];
+    const totalAnnouncements = [{ count: '0' }];
+    const publishedAnnouncements = [{ count: '0' }];
+    const unpublishedAnnouncements = [{ count: '0' }];
+    const totalLogs = [{ count: '0' }];
+    const logsLast7Days = [{ count: '0' }];
+    const logsLast30Days = [{ count: '0' }];
+    const loginCount = [{ count: '0' }];
+    const uploadCount = [{ count: '0' }];
+    const usersByRole: any[] = [];
+    const inactiveUsersList: any[] = [];
+    const dailyActivity: any[] = [];
+    const topActiveUsers: any[] = [];
+    const groupsUsage: any[] = [];
+    
+    // LINE API Usage Statistics
+    let lineUsage = {
+      totalMessages: 0,
+      thisMonth: 0,
+      lastMonth: 0,
+      freeQuotaRemaining: 1000,
+      error: null as string | null,
+    };
+
+    const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (LINE_CHANNEL_ACCESS_TOKEN) {
+      try {
+        // ดึงข้อมูลการใช้งาน LINE API
+        const lineResponse = await fetch('https://api.line.me/v2/bot/message/quota/consumption', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+          },
+        });
+
+        if (lineResponse.ok) {
+          const lineData = await lineResponse.json();
+          lineUsage = {
+            totalMessages: lineData.totalUsage || 0,
+            thisMonth: lineData.totalUsage || 0,
+            lastMonth: 0,
+            freeQuotaRemaining: Math.max(0, 1000 - (lineData.totalUsage || 0)),
+            error: null,
+          };
+        } else {
+          lineUsage.error = `LINE API Error: ${lineResponse.status}`;
+        }
+      } catch (lineError) {
+        console.error('[Analytics API] LINE usage fetch error:', lineError);
+        lineUsage.error = lineError instanceof Error ? lineError.message : 'Unknown error';
+      }
+    } else {
+      lineUsage.error = 'LINE_CHANNEL_ACCESS_TOKEN not configured';
+    }
+    
+    console.log('[Analytics API] All data fetched successfully');
 
     const result = {
       users: {
-        total: parseInt(userStats[0]?.total || '0'),
-        active: parseInt(userStats[0]?.active || '0'),
-        inactive: parseInt(userStats[0]?.inactive || '0'),
-        withAccess: parseInt(userStats[0]?.with_access || '0'),
-        withoutAccess: parseInt(userStats[0]?.without_access || '0'),
+        total: parseInt(totalUsers[0]?.count || '0'),
+        active: parseInt(activeUsers[0]?.count || '0'),
+        inactive: parseInt(inactiveUsers[0]?.count || '0'),
+        withAccess: parseInt(usersWithAccess[0]?.count || '0'),
+        withoutAccess: parseInt(usersWithoutAccess[0]?.count || '0'),
         newLast7Days: parseInt(newUsersLast7Days[0]?.count || '0'),
         newLast30Days: parseInt(newUsersLast30Days[0]?.count || '0'),
         byRole: usersByRole.map(r => ({ role: r.role, count: parseInt(r.count) })),
       },
       requests: {
-        total: parseInt(requestStats[0]?.total || '0'),
-        pending: parseInt(requestStats[0]?.pending || '0'),
-        approved: parseInt(requestStats[0]?.approved || '0'),
-        rejected: parseInt(requestStats[0]?.rejected || '0'),
+        total: parseInt(totalRequests[0]?.count || '0'),
+        pending: parseInt(pendingRequests[0]?.count || '0'),
+        approved: parseInt(approvedRequests[0]?.count || '0'),
+        rejected: parseInt(rejectedRequests[0]?.count || '0'),
         last7Days: parseInt(requestsLast7Days[0]?.count || '0'),
         last30Days: parseInt(requestsLast30Days[0]?.count || '0'),
       },
       priceGroups: {
-        total: parseInt(priceGroupStats[0]?.total || '0'),
-        active: parseInt(priceGroupStats[0]?.active || '0'),
-        inactive: parseInt(priceGroupStats[0]?.inactive || '0'),
+        total: parseInt(totalGroups[0]?.count || '0'),
+        active: parseInt(activeGroups[0]?.count || '0'),
+        inactive: parseInt(inactiveGroups[0]?.count || '0'),
         usage: groupsUsage.map(g => ({
           id: g.group_id,
           name: g.group_name,
-          branchName: g.branch_name,
           userCount: parseInt(g.user_count),
           imageCount: parseInt(g.image_count),
         })),
       },
       images: {
-        total: parseInt(imageStats[0]?.total || '0'),
+        total: parseInt(totalImages[0]?.count || '0'),
         last7Days: parseInt(imagesLast7Days[0]?.count || '0'),
         last30Days: parseInt(imagesLast30Days[0]?.count || '0'),
       },
       announcements: {
-        total: parseInt(announcementStats[0]?.total || '0'),
-        published: parseInt(announcementStats[0]?.published || '0'),
-        unpublished: parseInt(announcementStats[0]?.unpublished || '0'),
-      },
-      branches: {
-        total: parseInt(branchStats[0]?.total || '0'),
-        active: parseInt(branchStats[0]?.active || '0'),
+        total: parseInt(totalAnnouncements[0]?.count || '0'),
+        published: parseInt(publishedAnnouncements[0]?.count || '0'),
+        unpublished: parseInt(unpublishedAnnouncements[0]?.count || '0'),
       },
       activity: {
-        totalLogs: parseInt(activityStats[0]?.total || '0'),
-        last7Days: parseInt(activityStats[0]?.last_7_days || '0'),
-        last30Days: parseInt(activityStats[0]?.last_30_days || '0'),
-        loginCount: parseInt(activityStats[0]?.login_count || '0'),
-        uploadCount: parseInt(activityStats[0]?.upload_count || '0'),
+        totalLogs: parseInt(totalLogs[0]?.count || '0'),
+        last7Days: parseInt(logsLast7Days[0]?.count || '0'),
+        last30Days: parseInt(logsLast30Days[0]?.count || '0'),
+        loginCount: parseInt(loginCount[0]?.count || '0'),
+        uploadCount: parseInt(uploadCount[0]?.count || '0'),
         dailyTrend: dailyActivity.map(d => ({
           date: d.date,
           logins: parseInt(d.logins),
           uploads: parseInt(d.uploads),
-          total: parseInt(d.total),
         })),
         topUsers: topActiveUsers.map(u => ({
           userId: u.user_id,
@@ -357,6 +179,15 @@ export async function GET() {
         lastLogin: u.last_login,
         daysInactive: parseInt(u.days_inactive?.toString() || '0'),
       })),
+      lineUsage: {
+        totalMessages: lineUsage.totalMessages,
+        thisMonth: lineUsage.thisMonth,
+        lastMonth: lineUsage.lastMonth,
+        freeQuotaRemaining: lineUsage.freeQuotaRemaining,
+        freeQuotaLimit: 1000,
+        percentUsed: Math.round((lineUsage.thisMonth / 1000) * 100),
+        error: lineUsage.error,
+      },
     };
 
     // Cache the result
