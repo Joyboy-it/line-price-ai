@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Power, X, User as UserIcon } from 'lucide-react';
 import { User, PriceGroup, UserRole } from '@/types';
 import { hasPermission } from '@/lib/permissions';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface UserWithGroups extends User {
   groups: PriceGroup[];
@@ -28,6 +29,12 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  }>({ isOpen: false, title: '', message: '', onConfirm: async () => {} });
   
   // ใช้ role จาก server-side แทน useSession เพื่อแก้ปัญหา session loading
   const canManageRoles = hasPermission(currentUserRole, 'manage_roles');
@@ -76,38 +83,54 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
     }
   };
 
-  const handleRemoveGroup = async (userId: string, groupId: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/groups/${groupId}`, {
-        method: 'DELETE',
-      });
+  const handleRemoveGroup = async (userId: string, groupId: string, groupName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบกลุ่มราคา',
+      message: `คุณต้องการลบกลุ่ม "${groupName}" ออกจากผู้ใช้นี้หรือไม่?`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/admin/users/${userId}/groups/${groupId}`, {
+            method: 'DELETE',
+          });
 
-      if (!response.ok) {
-        throw new Error('Failed to remove group');
-      }
+          if (!response.ok) {
+            throw new Error('Failed to remove group');
+          }
 
-      window.location.reload();
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการลบกลุ่ม');
-    }
+          alert('ลบกลุ่มสำเร็จ');
+          window.location.reload();
+        } catch (error) {
+          alert('เกิดข้อผิดพลาดในการลบกลุ่ม');
+        }
+      },
+    });
   };
 
   const handleRemoveBranch = async (userId: string, branchName: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/branches`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branchName }),
-      });
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบสาขา',
+      message: `คุณต้องการลบสาขา "${branchName}" ออกจากผู้ใช้นี้หรือไม่?`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/admin/users/${userId}/branches`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ branchName }),
+          });
 
-      if (!response.ok) {
-        throw new Error('Failed to remove branch');
-      }
+          if (!response.ok) {
+            throw new Error('Failed to remove branch');
+          }
 
-      window.location.reload();
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการลบสาขา');
-    }
+          alert('ลบสาขาสำเร็จ');
+          window.location.reload();
+        } catch (error) {
+          alert('เกิดข้อผิดพลาดในการลบสาขา');
+        }
+      },
+    });
   };
 
   const getRoleBadge = (role: string) => {
@@ -288,7 +311,7 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
                     >
                       {group.name}
                       <button
-                        onClick={() => handleRemoveGroup(user.id, group.id)}
+                        onClick={() => handleRemoveGroup(user.id, group.id, group.name)}
                         className="hover:text-green-900"
                         title="ลบกลุ่มนี้"
                       >
@@ -363,6 +386,16 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
           canManageRoles={canManageRoles}
         />
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="yes"
+        type="danger"
+      />
     </div>
   );
 }

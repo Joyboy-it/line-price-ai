@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Search, Tag, Edit, Trash2 } from 'lucide-react';
 import { PriceGroup } from '@/types';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface GroupListProps {
   groups: PriceGroup[];
@@ -11,25 +12,40 @@ interface GroupListProps {
 
 export default function GroupList({ groups }: GroupListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  }>({ isOpen: false, title: '', message: '', onConfirm: async () => {} });
 
   const filteredGroups = groups.filter((group) =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     group.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = async (groupId: string) => {
-    if (!confirm('คุณต้องการลบกลุ่มราคานี้หรือไม่?')) return;
-    
-    try {
-      const response = await fetch(`/api/admin/price-groups/${groupId}`, {
-        method: 'DELETE',
-      });
-      if (response.ok) {
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
+  const handleDelete = async (groupId: string, groupName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบกลุ่มราคา',
+      message: `คุณต้องการลบกลุ่มราคา "${groupName}" หรือไม่? การลบจะส่งผลต่อผู้ใช้ที่เข้าถึงกลุ่มนี้`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/admin/price-groups/${groupId}`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            alert('ลบกลุ่มราคาสำเร็จ');
+            window.location.reload();
+          } else {
+            alert('ไม่สามารถลบกลุ่มราคาได้');
+          }
+        } catch (error) {
+          console.error('Delete error:', error);
+          alert('เกิดข้อผิดพลาดในการลบกลุ่มราคา');
+        }
+      },
+    });
   };
 
   return (
@@ -94,7 +110,7 @@ export default function GroupList({ groups }: GroupListProps) {
                 <Edit className="w-5 h-5" />
               </Link>
               <button
-                onClick={() => handleDelete(group.id)}
+                onClick={() => handleDelete(group.id, group.name)}
                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
               >
                 <Trash2 className="w-5 h-5" />
@@ -109,6 +125,16 @@ export default function GroupList({ groups }: GroupListProps) {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="yes"
+        type="danger"
+      />
     </div>
   );
 }

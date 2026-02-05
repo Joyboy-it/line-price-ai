@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, MapPin, Edit, Trash2, Search } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface Branch {
   id: string;
@@ -22,6 +23,12 @@ interface BranchListProps {
 export default function BranchList({ branches }: BranchListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredBranches, setFilteredBranches] = useState<Branch[]>(branches);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void>;
+  }>({ isOpen: false, title: '', message: '', onConfirm: async () => {} });
 
   useEffect(() => {
     const filtered = branches.filter((branch) =>
@@ -32,25 +39,29 @@ export default function BranchList({ branches }: BranchListProps) {
   }, [searchTerm, branches]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`คุณต้องการลบสาขา "${name}" หรือไม่?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบสาขา',
+      message: `คุณต้องการลบสาขา "${name}" หรือไม่? การลบจะส่งผลต่อผู้ใช้ที่เข้าถึงสาขานี้`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/admin/branches/${id}`, {
+            method: 'DELETE',
+          });
 
-    try {
-      const response = await fetch(`/api/admin/branches/${id}`, {
-        method: 'DELETE',
-      });
+          if (!response.ok) {
+            const data = await response.json();
+            alert(data.error || 'ไม่สามารถลบสาขาได้');
+            return;
+          }
 
-      if (!response.ok) {
-        const data = await response.json();
-        alert(data.error || 'ไม่สามารถลบสาขาได้');
-        return;
-      }
-
-      window.location.reload();
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการลบสาขา');
-    }
+          alert('ลบสาขาสำเร็จ');
+          window.location.reload();
+        } catch (error) {
+          alert('เกิดข้อผิดพลาดในการลบสาขา');
+        }
+      },
+    });
   };
 
   return (
@@ -208,6 +219,16 @@ export default function BranchList({ branches }: BranchListProps) {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="yes"
+        type="danger"
+      />
     </div>
   );
 }

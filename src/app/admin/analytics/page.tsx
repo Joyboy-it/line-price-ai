@@ -20,7 +20,6 @@ import {
   Calendar,
   ArrowLeft,
   XCircle,
-  UserCircle,
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -74,15 +73,6 @@ interface AnalyticsData {
     shopName: string;
     lastLogin: string | null;
     daysInactive: number;
-  }[];
-  onlineUsers: {
-    id: string;
-    name: string;
-    email: string;
-    image: string | null;
-    role: string;
-    shopName: string | null;
-    lastLogin: string;
   }[];
 }
 
@@ -307,70 +297,6 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* Online Users */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <Activity className="w-6 h-6 text-green-600" />
-          ผู้ใช้ออนไลน์อยู่ปัจจุบัน
-          <span className="ml-2 px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
-            {data.onlineUsers.length}
-          </span>
-        </h2>
-        {data.onlineUsers.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center">
-            <UserCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">ไม่มีผู้ใช้ออนไลน์ในขณะนี้</p>
-            <p className="text-sm text-gray-500 mt-1">แสดงผู้ใช้ที่เข้าใช้งานภายใน 10 นาทีที่ผ่านมา</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {data.onlineUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex flex-col items-center p-3 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow"
-                >
-                  <div className="relative mb-2">
-                    {user.image ? (
-                      <img
-                        src={user.image}
-                        alt={user.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-green-400"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center border-2 border-green-400">
-                        <span className="text-white font-bold text-lg">
-                          {user.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-800 text-center line-clamp-1 w-full" title={user.name}>
-                    {user.name}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize mt-0.5">
-                    {user.role === 'admin' ? 'แอดมิน' : 
-                     user.role === 'operator' ? 'ผู้ดูแล' : 
-                     user.role === 'worker' ? 'พนักงาน' : 'ผู้ใช้'}
-                  </p>
-                  {user.shopName && (
-                    <p className="text-xs text-gray-400 text-center line-clamp-1 w-full mt-0.5" title={user.shopName}>
-                      {user.shopName}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                💚 แสดงผู้ใช้ที่เข้าใช้งานภายใน 10 นาทีที่ผ่านมา • อัพเดทอัตโนมัติทุก 5 นาที
-              </p>
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Inactive Users Alert */}
