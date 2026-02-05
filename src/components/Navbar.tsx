@@ -19,6 +19,7 @@ import {
   BarChart3,
   Bell,
   Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { Permission } from '@/lib/permissions';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -186,6 +187,16 @@ export default function Navbar() {
                           )}
                           {canAccess('manage_roles') && (
                             <Link
+                              href="/admin/logs"
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              onClick={() => setIsDropdownOpen(false)}
+                            >
+                              <FileText className="w-4 h-4" />
+                              ประวัติการใช้งาน
+                            </Link>
+                          )}
+                          {canAccess('manage_roles') && (
+                            <Link
                               href="/admin/roles"
                               className="flex items-center gap-2 px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
                               onClick={() => setIsDropdownOpen(false)}
@@ -326,6 +337,16 @@ export default function Navbar() {
                       >
                         <BarChart3 className="w-5 h-5" />
                         ดูสถิติ
+                      </Link>
+                    )}
+                    {canAccess('manage_roles') && (
+                      <Link
+                        href="/admin/logs"
+                        className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <FileText className="w-5 h-5" />
+                        ประวัติการใช้งาน
                       </Link>
                     )}
                     {canAccess('manage_roles') && (

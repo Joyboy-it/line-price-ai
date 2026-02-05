@@ -10,7 +10,6 @@ import {
   Image as ImageIcon,
   MapPin,
   Shield,
-  ClipboardCheck,
 } from 'lucide-react';
 import { Permission } from '@/lib/permissions';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -32,7 +31,6 @@ const allQuickActions: QuickAction[] = [
   { href: '/admin/manage-groups', icon: Tag, label: 'จัดการกลุ่มราคา', desc: 'เพิ่ม/แก้ไข/ลบกลุ่ม', bgColor: 'bg-green-50', borderColor: 'border-green-100', iconColor: 'text-green-600', permission: 'manage_price_groups' },
   { href: '/admin/price-images', icon: ImageIcon, label: 'จัดการรูปภาพราคา', desc: 'อัปโหลด/แก้ไขรูป', bgColor: 'bg-orange-50', borderColor: 'border-orange-100', iconColor: 'text-orange-600', permission: 'upload_images' },
   { href: '/admin/announcements', icon: Megaphone, label: 'จัดการประกาศ', desc: 'ประกาศประชาสัมพันธ์', bgColor: 'bg-purple-50', borderColor: 'border-purple-100', iconColor: 'text-purple-600', permission: 'manage_announcements' },
-  { href: '/admin/requests', icon: ClipboardCheck, label: 'อนุมัติคำขอ', desc: 'คำขอเข้าใช้งาน', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-100', iconColor: 'text-yellow-600', permission: 'approve_requests' },
   { href: '/admin/analytics', icon: BarChart3, label: 'Analytics Dashboard', desc: 'สถิติและกราฟ', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-100', iconColor: 'text-indigo-600', permission: 'view_analytics' },
   { href: '/admin/logs', icon: FileText, label: 'ประวัติใช้งาน', desc: 'ประวัติการใช้งาน', bgColor: 'bg-slate-50', borderColor: 'border-slate-100', iconColor: 'text-slate-600', permission: 'manage_roles' },
   { href: '/admin/roles', icon: Shield, label: 'จัดการสิทธิ์', desc: 'กำหนดสิทธิ์ผู้ใช้', bgColor: 'bg-pink-50', borderColor: 'border-pink-100', iconColor: 'text-pink-600', permission: 'manage_roles' },
