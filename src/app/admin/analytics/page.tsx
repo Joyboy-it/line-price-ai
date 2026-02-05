@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Users,
@@ -12,13 +10,18 @@ import {
   Image as ImageIcon,
   Megaphone,
   TrendingUp,
-  TrendingDown,
   Activity,
   Clock,
   AlertTriangle,
   BarChart3,
-  Calendar,
   ArrowLeft,
+  RefreshCw,
+  MapPin,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Upload,
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -44,7 +47,7 @@ interface AnalyticsData {
     total: number;
     active: number;
     inactive: number;
-    usage: { id: string; name: string; userCount: number; imageCount: number }[];
+    usage: { id: string; name: string; branchName: string; userCount: number; imageCount: number }[];
   };
   images: {
     total: number;
@@ -56,13 +59,17 @@ interface AnalyticsData {
     published: number;
     unpublished: number;
   };
+  branches: {
+    total: number;
+    active: number;
+  };
   activity: {
     totalLogs: number;
     last7Days: number;
     last30Days: number;
     loginCount: number;
     uploadCount: number;
-    dailyTrend: { date: string; logins: number; uploads: number }[];
+    dailyTrend: { date: string; logins: number; uploads: number; total: number }[];
     topUsers: { userId: string; userName: string; activityCount: number }[];
   };
   inactiveUsers: {
@@ -76,21 +83,11 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'7days' | '30days' | 'all'>('30days');
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/');
-    } else if (session?.user && session.user.role !== 'admin' && session.user.role !== 'operator') {
-      router.push('/');
-    }
-  }, [session, status, router]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -101,98 +98,77 @@ export default function AnalyticsPage() {
       setRefreshing(true);
     }
     try {
-      const response = await fetch('/api/admin/analytics', {
-        cache: 'no-store',
-      });
+      const response = await fetch('/api/admin/analytics');
       if (response.ok) {
         const result = await response.json();
         setData(result);
         setLastUpdated(new Date());
+        setError(null);
+      } else {
+        setError('ไม่สามารถโหลดข้อมูลได้');
       }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const SkeletonCard = () => (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-      </div>
-      <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-32"></div>
-    </div>
-  );
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-700';
+      case 'operator': return 'bg-orange-100 text-orange-700';
+      case 'worker': return 'bg-blue-100 text-blue-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
-  if (loading || !data) {
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin': return 'Admin';
+      case 'operator': return 'Operator';
+      case 'worker': return 'Worker';
+      case 'user': return 'User';
+      default: return role;
+    }
+  };
+
+  // Loading State
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div>
-              <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
-            </div>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">กำลังโหลดข้อมูล Analytics...</p>
+            <p className="text-sm text-gray-400 mt-2">กรุณารอสักครู่</p>
           </div>
-          <div className="flex gap-2">
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
-        </div>
-
-        {/* Stats Skeleton */}
-        <section className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        </section>
-
-        {/* More Skeletons */}
-        <section className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        </section>
-
-        <div className="text-center mt-8">
-          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล Analytics...</p>
         </div>
       </div>
     );
   }
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    subtitle, 
-    color = 'bg-gray-50',
-  }: { 
-    title: string; 
-    value: number | string; 
-    subtitle?: string; 
-    color?: string;
-  }) => (
-    <div className={`${color} rounded-lg p-6 border border-gray-200`}>
-      <p className="text-sm text-gray-600 mb-2">{title}</p>
-      <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
-      {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-    </div>
-  );
+  // Error State
+  if (error || !data) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <p className="text-gray-800 font-medium text-lg">{error || 'ไม่สามารถโหลดข้อมูลได้'}</p>
+            <button
+              onClick={() => fetchAnalytics()}
+              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              ลองใหม่อีกครั้ง
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -229,74 +205,140 @@ export default function AnalyticsPage() {
 
       {/* Overview Stats */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">ภาพรวมระบบ</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="ผู้ใช้ทั้งหมด"
-            value={data.users.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.users.newLast7Days : data.users.newLast30Days} คน`}
-            color="bg-blue-50"
-          />
-          <StatCard
-            title="ผู้ใช้ที่มีสิทธิ์"
-            value={data.users.withAccess}
-            subtitle={`${Math.round((data.users.withAccess / data.users.total) * 100)}% ของทั้งหมด`}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="กลุ่มราคา"
-            value={data.priceGroups.total}
-            subtitle={`Active ${data.priceGroups.active} กลุ่ม`}
-            color="bg-purple-50"
-          />
-          <StatCard
-            title="รูปภาพทั้งหมด"
-            value={data.images.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.images.last7Days : data.images.last30Days} รูป`}
-            color="bg-orange-50"
-          />
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-indigo-600" />
+          ภาพรวมระบบ
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              <span className="text-sm text-blue-700 font-medium">ผู้ใช้</span>
+            </div>
+            <p className="text-3xl font-bold text-blue-900">{data.users.total}</p>
+            <p className="text-xs text-blue-600 mt-1">+{data.users.newLast30Days} ใน 30 วัน</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck className="w-5 h-5 text-green-600" />
+              <span className="text-sm text-green-700 font-medium">มีสิทธิ์</span>
+            </div>
+            <p className="text-3xl font-bold text-green-900">{data.users.withAccess}</p>
+            <p className="text-xs text-green-600 mt-1">{data.users.total > 0 ? Math.round((data.users.withAccess / data.users.total) * 100) : 0}% ของทั้งหมด</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Tag className="w-5 h-5 text-purple-600" />
+              <span className="text-sm text-purple-700 font-medium">กลุ่มราคา</span>
+            </div>
+            <p className="text-3xl font-bold text-purple-900">{data.priceGroups.total}</p>
+            <p className="text-xs text-purple-600 mt-1">Active {data.priceGroups.active} กลุ่ม</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+            <div className="flex items-center gap-2 mb-2">
+              <ImageIcon className="w-5 h-5 text-orange-600" />
+              <span className="text-sm text-orange-700 font-medium">รูปภาพ</span>
+            </div>
+            <p className="text-3xl font-bold text-orange-900">{data.images.total}</p>
+            <p className="text-xs text-orange-600 mt-1">+{data.images.last30Days} ใน 30 วัน</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-4 border border-teal-200">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-5 h-5 text-teal-600" />
+              <span className="text-sm text-teal-700 font-medium">สาขา</span>
+            </div>
+            <p className="text-3xl font-bold text-teal-900">{data.branches.total}</p>
+            <p className="text-xs text-teal-600 mt-1">Active {data.branches.active} สาขา</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-4 border border-pink-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Megaphone className="w-5 h-5 text-pink-600" />
+              <span className="text-sm text-pink-700 font-medium">ประกาศ</span>
+            </div>
+            <p className="text-3xl font-bold text-pink-900">{data.announcements.total}</p>
+            <p className="text-xs text-pink-600 mt-1">เผยแพร่ {data.announcements.published} รายการ</p>
+          </div>
         </div>
       </section>
 
-      {/* User Statistics */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติผู้ใช้งาน</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="ผู้ใช้ Active"
-            value={data.users.active}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="ผู้ใช้ Inactive"
-            value={data.users.inactive}
-            color="bg-gray-50"
-          />
-          <StatCard
-            title="ยังไม่มีสิทธิ์"
-            value={data.users.withoutAccess}
-            color="bg-yellow-50"
-          />
-          <StatCard
-            title="คำขอรออนุมัติ"
-            value={data.requests.pending}
-            color="bg-red-50"
-          />
-        </div>
-
-        {/* Users by Role */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">ผู้ใช้แยกตามบทบาท</h3>
-          <div className="grid grid-cols-3 gap-4">
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* User Statistics */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            สถิติผู้ใช้งาน
+          </h3>
+          
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-green-700">{data.users.active}</p>
+              <p className="text-xs text-green-600">Active</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-gray-700">{data.users.inactive}</p>
+              <p className="text-xs text-gray-600">Inactive</p>
+            </div>
+          </div>
+          
+          <h4 className="text-sm font-medium text-gray-700 mb-3">แยกตามบทบาท</h4>
+          <div className="space-y-2">
             {data.users.byRole.map((role) => (
-              <div key={role.role} className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-800">{role.count}</p>
-                <p className="text-sm text-gray-600 capitalize">{role.role}</p>
+              <div key={role.role} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleBadgeColor(role.role)}`}>
+                  {getRoleLabel(role.role)}
+                </span>
+                <span className="font-bold text-gray-800">{role.count} คน</span>
               </div>
             ))}
           </div>
         </div>
-      </section>
+
+        {/* Request Statistics */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-yellow-600" />
+            สถิติคำขอสิทธิ์
+          </h3>
+          
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-yellow-50 rounded-lg p-3 text-center border-2 border-yellow-200">
+              <p className="text-2xl font-bold text-yellow-700">{data.requests.pending}</p>
+              <p className="text-xs text-yellow-600">รออนุมัติ</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-blue-700">{data.requests.total}</p>
+              <p className="text-xs text-blue-600">คำขอทั้งหมด</p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-700">อนุมัติแล้ว</span>
+              </div>
+              <span className="font-bold text-green-800">{data.requests.approved}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-600" />
+                <span className="text-sm text-red-700">ปฏิเสธแล้ว</span>
+              </div>
+              <span className="font-bold text-red-800">{data.requests.rejected}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+              <span className="text-sm text-gray-600">คำขอใน 30 วัน</span>
+              <span className="font-bold text-gray-800">+{data.requests.last30Days}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Inactive Users Alert */}
       {data.inactiveUsers.length > 0 && (
@@ -357,35 +399,6 @@ export default function AnalyticsPage() {
           </div>
         </section>
       )}
-
-      {/* Request Statistics */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติคำขอสิทธิ์</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="คำขอทั้งหมด"
-            value={data.requests.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.requests.last7Days : data.requests.last30Days} คำขอ`}
-          />
-          <StatCard
-            title="รออนุมัติ"
-            value={data.requests.pending}
-            color="bg-yellow-50"
-          />
-          <StatCard
-            title="อนุมัติแล้ว"
-            value={data.requests.approved}
-            subtitle={`${Math.round((data.requests.approved / data.requests.total) * 100)}% ของทั้งหมด`}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="ปฏิเสธแล้ว"
-            value={data.requests.rejected}
-            subtitle={`${Math.round((data.requests.rejected / data.requests.total) * 100)}% ของทั้งหมด`}
-            color="bg-red-50"
-          />
-        </div>
-      </section>
 
       {/* Price Groups Usage */}
       <section className="mb-8">
@@ -455,30 +468,68 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Other Stats */}
+      {/* Activity Stats */}
       <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติอื่นๆ</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            title="ประกาศทั้งหมด"
-            value={data.announcements.total}
-            subtitle={`เผยแพร่ ${data.announcements.published} รายการ`}
-            color="bg-purple-50"
-          />
-          <StatCard
-            title="กิจกรรมทั้งหมด"
-            value={data.activity.totalLogs}
-            subtitle={`${filter === '7days' ? data.activity.last7Days : data.activity.last30Days} กิจกรรมล่าสุด`}
-            color="bg-indigo-50"
-          />
-          <StatCard
-            title="การเข้าสู่ระบบ"
-            value={data.activity.loginCount}
-            subtitle="ทั้งหมด"
-            color="bg-cyan-50"
-          />
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-indigo-600" />
+          สถิติกิจกรรม
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
+            <p className="text-sm text-indigo-700 font-medium mb-1">กิจกรรมทั้งหมด</p>
+            <p className="text-2xl font-bold text-indigo-900">{data.activity.totalLogs.toLocaleString()}</p>
+            <p className="text-xs text-indigo-600 mt-1">+{data.activity.last30Days} ใน 30 วัน</p>
+          </div>
+          <div className="bg-cyan-50 rounded-xl p-4 border border-cyan-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Eye className="w-4 h-4 text-cyan-600" />
+              <p className="text-sm text-cyan-700 font-medium">เข้าสู่ระบบ</p>
+            </div>
+            <p className="text-2xl font-bold text-cyan-900">{data.activity.loginCount.toLocaleString()}</p>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Upload className="w-4 h-4 text-amber-600" />
+              <p className="text-sm text-amber-700 font-medium">อัปโหลด</p>
+            </div>
+            <p className="text-2xl font-bold text-amber-900">{data.activity.uploadCount.toLocaleString()}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <p className="text-sm text-gray-700 font-medium mb-1">กิจกรรม 7 วัน</p>
+            <p className="text-2xl font-bold text-gray-900">{data.activity.last7Days.toLocaleString()}</p>
+          </div>
         </div>
       </section>
+
+      {/* Daily Activity Trend */}
+      {data.activity.dailyTrend.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+            แนวโน้มกิจกรรม 14 วันล่าสุด
+          </h2>
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="space-y-2">
+              {data.activity.dailyTrend.slice(0, 7).map((day) => (
+                <div key={day.date} className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600 w-24">
+                    {new Date(day.date).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </span>
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full"
+                        style={{ width: `${Math.min((day.total / Math.max(...data.activity.dailyTrend.map(d => d.total))) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 w-16 text-right">{day.total} รายการ</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
