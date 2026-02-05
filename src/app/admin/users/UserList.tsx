@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Trash2, X, User as UserIcon } from 'lucide-react';
+import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Power, X, User as UserIcon } from 'lucide-react';
 import { User, PriceGroup } from '@/types';
 import { hasPermission } from '@/lib/permissions';
 
@@ -47,26 +47,31 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
     return matchesSearch && matchesBranch && matchesRole && matchesStatus;
   });
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`คุณต้องการลบผู้ใช้ "${userName}" หรือไม่?`)) {
+  const handleToggleUserStatus = async (userId: string, userName: string, currentStatus: boolean) => {
+    const action = currentStatus ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน';
+    if (!confirm(`คุณต้องการ${action}ผู้ใช้ "${userName}" หรือไม่?`)) {
       return;
     }
 
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: !currentStatus }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        alert(data.error || 'ไม่สามารถลบผู้ใช้ได้');
+        alert(data.error || `ไม่สามารถ${action}ผู้ใช้ได้`);
         return;
       }
 
-      alert('ลบผู้ใช้สำเร็จ');
+      alert(`${action}ผู้ใช้สำเร็จ`);
       window.location.reload();
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการลบผู้ใช้');
+      alert(`เกิดข้อผิดพลาดในการ${action}ผู้ใช้`);
     }
   };
 
@@ -255,11 +260,15 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
                   </button>
                 )}
                 <button
-                  onClick={() => handleDeleteUser(user.id, user.name || 'ผู้ใช้')}
-                  className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                  title="ลบผู้ใช้"
+                  onClick={() => handleToggleUserStatus(user.id, user.name || 'ผู้ใช้', user.is_active)}
+                  className={`p-2 rounded-lg ${
+                    user.is_active
+                      ? 'text-orange-500 hover:text-orange-600 hover:bg-orange-50'
+                      : 'text-green-500 hover:text-green-600 hover:bg-green-50'
+                  }`}
+                  title={user.is_active ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน'}
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Power className="w-5 h-5" />
                 </button>
               </div>
             </div>
