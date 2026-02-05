@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { DashboardStats, AccessRequest, User } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
+import QuickActions from './QuickActions';
 
 async function getDashboardStats(): Promise<DashboardStats> {
   const [pending, approved, users, groups, activeGroups, images] = await Promise.all([
@@ -69,15 +70,6 @@ export default async function AdminDashboardPage() {
     getRecentRequests(),
   ]);
 
-  const quickActions = [
-    { href: '/admin/users', icon: Users, label: 'จัดการผู้ใช้', desc: 'ผู้ใช้งานในระบบ', bgColor: 'bg-blue-50', borderColor: 'border-blue-100', iconColor: 'text-blue-600' },
-    { href: '/admin/manage-groups', icon: Tag, label: 'จัดการกลุ่มราคา', desc: 'เพิ่ม/แก้ไข/ลบกลุ่ม', bgColor: 'bg-green-50', borderColor: 'border-green-100', iconColor: 'text-green-600' },
-    { href: '/admin/announcements', icon: Megaphone, label: 'จัดการประกาศ', desc: 'ประกาศประชาสัมพันธ์', bgColor: 'bg-purple-50', borderColor: 'border-purple-100', iconColor: 'text-purple-600' },
-    { href: '/admin/price-images', icon: ImageIcon, label: 'จัดการรูปภาพราคา', desc: 'อัปโหลด/แก้ไขรูป', bgColor: 'bg-orange-50', borderColor: 'border-orange-100', iconColor: 'text-orange-600' },
-    { href: '/admin/logs', icon: FileText, label: 'ประวัติใช้งาน', desc: 'ประวัติการใช้งาน', bgColor: 'bg-slate-50', borderColor: 'border-slate-100', iconColor: 'text-slate-600' },
-    { href: '/admin/analytics', icon: BarChart3, label: 'Analytics Dashboard', desc: 'สถิติและกราฟ', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-100', iconColor: 'text-indigo-600' },
-  ];
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -91,27 +83,8 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <section className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900">⚡ Quick Actions</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {quickActions.map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className={`flex items-center gap-3 p-4 ${action.bgColor} rounded-lg border ${action.borderColor} hover:shadow-md transition`}
-            >
-              <action.icon className={`w-5 h-5 ${action.iconColor}`} />
-              <div>
-                <p className="font-medium text-gray-900 text-sm">{action.label}</p>
-                <p className="text-xs text-gray-500">{action.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* Quick Actions - Client Component with permission check */}
+      <QuickActions />
 
       {/* Stats */}
       <section className="mb-8">
