@@ -72,6 +72,25 @@ export async function GET() {
     const topActiveUsers: any[] = [];
     const groupsUsage: any[] = [];
     
+    // Online Users (active within last 10 minutes)
+    const onlineUsers = await query<{
+      id: string;
+      name: string;
+      email: string;
+      image: string | null;
+      role: string;
+      shop_name: string | null;
+      last_login: string;
+    }>(
+      `SELECT id, name, email, image, role, shop_name, last_login
+       FROM users
+       WHERE last_login IS NOT NULL
+         AND last_login > NOW() - INTERVAL '10 minutes'
+         AND is_active = true
+       ORDER BY last_login DESC
+       LIMIT 50`
+    );
+    
     // LINE API Usage Statistics
     let lineUsage = {
       totalMessages: 0,
@@ -178,6 +197,15 @@ export async function GET() {
         shopName: u.shop_name,
         lastLogin: u.last_login,
         daysInactive: parseInt(u.days_inactive?.toString() || '0'),
+      })),
+      onlineUsers: onlineUsers.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        image: u.image,
+        role: u.role,
+        shopName: u.shop_name,
+        lastLogin: u.last_login,
       })),
       lineUsage: {
         totalMessages: lineUsage.totalMessages,
