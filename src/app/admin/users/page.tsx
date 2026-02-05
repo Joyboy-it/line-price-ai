@@ -88,7 +88,12 @@ export default async function AdminUsersPage() {
         </div>
       </div>
 
-      <UserList users={users} priceGroups={priceGroups} branches={branches} />
+      <UserList 
+        users={users} 
+        priceGroups={priceGroups} 
+        branches={branches}
+        currentUserRole={session.user.role}
+      />
     </div>
   );
 }

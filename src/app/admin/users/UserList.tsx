@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Trash2, X, User as UserIcon } from 'lucide-react';
@@ -17,10 +16,10 @@ interface UserListProps {
   users: UserWithGroups[];
   priceGroups: PriceGroup[];
   branches: { id: string; name: string; code: string }[];
+  currentUserRole: 'admin' | 'operator';
 }
 
-export default function UserList({ users, priceGroups, branches }: UserListProps) {
-  const { data: session } = useSession();
+export default function UserList({ users, priceGroups, branches, currentUserRole }: UserListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState<string>('ทั้งหมด');
   const [roleFilter, setRoleFilter] = useState<string>('ทั้งหมด');
@@ -30,7 +29,8 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   
-  const canManageRoles = session?.user?.role ? hasPermission(session.user.role, 'manage_roles') : false;
+  // ใช้ role จาก server-side แทน useSession เพื่อแก้ปัญหา session loading
+  const canManageRoles = hasPermission(currentUserRole, 'manage_roles');
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -242,16 +242,18 @@ export default function UserList({ users, priceGroups, branches }: UserListProps
                 >
                   <Tag className="w-5 h-5" />
                 </button>
-                <button
-                  onClick={() => {
-                    setSelectedUser(user);
-                    setShowEditModal(true);
-                  }}
-                  className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                  title="สิทธ์ Admin"
-                >
-                  <Shield className="w-5 h-5" />
-                </button>
+                {canManageRoles && (
+                  <button
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setShowEditModal(true);
+                    }}
+                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                    title="แก้ไขสิทธิ์"
+                  >
+                    <Shield className="w-5 h-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => handleDeleteUser(user.id, user.name || 'ผู้ใช้')}
                   className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
