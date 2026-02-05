@@ -14,8 +14,12 @@ interface UserWithGroups extends User {
 }
 
 async function getUsers(): Promise<UserWithGroups[]> {
+  // แสดงเฉพาะผู้ใช้ที่ผ่านการอนุมัติแล้ว (มี access_request ที่ approved)
   const users = await query<User>(
-    `SELECT * FROM users ORDER BY created_at DESC`
+    `SELECT DISTINCT u.* FROM users u
+     INNER JOIN access_requests ar ON ar.user_id = u.id
+     WHERE ar.status = 'approved'
+     ORDER BY u.created_at DESC`
   );
 
   const usersWithGroups = await Promise.all(
