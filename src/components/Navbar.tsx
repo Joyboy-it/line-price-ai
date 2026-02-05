@@ -106,17 +106,15 @@ export default function Navbar() {
                         <p className="text-xs text-gray-500">{session.user.email}</p>
                       </div>
                       {(isAdmin || isOperator || isWorker) && (
-                        <Link
-                          href="/admin"
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          <LayoutDashboard className="w-4 h-4" />
-                          Dashboard
-                        </Link>
-                      )}
-                      {isAdmin && (
                         <>
+                          <Link
+                            href="/admin"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Dashboard
+                          </Link>
                           <Link
                             href="/admin/branches"
                             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -206,17 +204,15 @@ export default function Navbar() {
                   </div>
                 </div>
                 {(isAdmin || isOperator || isWorker) && (
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <LayoutDashboard className="w-5 h-5" />
-                    Dashboard
-                  </Link>
-                )}
-                {isAdmin && (
                   <>
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="w-5 h-5" />
+                      Dashboard
+                    </Link>
                     <Link
                       href="/admin/branches"
                       className="flex items-center gap-2 text-gray-700 hover:text-green-600 py-2"

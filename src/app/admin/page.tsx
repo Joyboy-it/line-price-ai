@@ -1,7 +1,4 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   Users,
@@ -66,12 +63,6 @@ async function getRecentRequests(): Promise<(AccessRequest & { user: User })[]> 
 }
 
 export default async function AdminDashboardPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-    redirect('/');
-  }
-
   const [stats, pendingRequests, recentRequests] = await Promise.all([
     getDashboardStats(),
     getPendingRequests(),

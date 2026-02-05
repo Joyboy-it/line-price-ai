@@ -1,7 +1,4 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Tag, Plus, Search } from 'lucide-react';
 import { PriceGroup } from '@/types';
@@ -19,12 +16,6 @@ async function getPriceGroups(): Promise<PriceGroup[]> {
 }
 
 export default async function ManageGroupsPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-    redirect('/');
-  }
-
   const priceGroups = await getPriceGroups();
 
   return (

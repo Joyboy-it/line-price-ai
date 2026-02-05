@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Users, Search, Filter, FileText, Tag, Edit, Trash2, Shield } from 'lucide-react';
@@ -62,10 +61,6 @@ async function getAllBranches() {
 export default async function AdminUsersPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
-    redirect('/');
-  }
-
   const [users, priceGroups, branches] = await Promise.all([
     getUsers(),
     getAllPriceGroups(),
@@ -96,7 +91,7 @@ export default async function AdminUsersPage() {
         users={users} 
         priceGroups={priceGroups} 
         branches={branches}
-        currentUserRole={session.user.role}
+        currentUserRole={(session?.user?.role || 'user') as 'admin' | 'operator' | 'worker' | 'user'}
       />
     </div>
   );

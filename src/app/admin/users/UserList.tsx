@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Power, X, User as UserIcon } from 'lucide-react';
-import { User, PriceGroup } from '@/types';
+import { User, PriceGroup, UserRole } from '@/types';
 import { hasPermission } from '@/lib/permissions';
 
 interface UserWithGroups extends User {
@@ -16,7 +16,7 @@ interface UserListProps {
   users: UserWithGroups[];
   priceGroups: PriceGroup[];
   branches: { id: string; name: string; code: string }[];
-  currentUserRole: 'admin' | 'operator';
+  currentUserRole: UserRole;
 }
 
 export default function UserList({ users, priceGroups, branches, currentUserRole }: UserListProps) {
