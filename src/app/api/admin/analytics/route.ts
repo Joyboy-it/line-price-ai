@@ -71,8 +71,8 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE is_active = true) as active,
-          COUNT(*) FILTER (WHERE is_active = false) as inactive,
+          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive,
           COUNT(DISTINCT uga.user_id) as with_access,
           COUNT(*) - COUNT(DISTINCT uga.user_id) as without_access
         FROM users u
@@ -110,9 +110,9 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE status = 'pending') as pending,
-          COUNT(*) FILTER (WHERE status = 'approved') as approved,
-          COUNT(*) FILTER (WHERE status = 'rejected') as rejected
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
         FROM access_requests
       `),
       
@@ -138,8 +138,8 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE is_active = true) as active,
-          COUNT(*) FILTER (WHERE is_active = false) as inactive
+          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN is_active = false THEN 1 ELSE 0 END) as inactive
         FROM price_groups
       `),
       
@@ -193,8 +193,8 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE is_published = true) as published,
-          COUNT(*) FILTER (WHERE is_published = false) as unpublished
+          SUM(CASE WHEN is_published = true THEN 1 ELSE 0 END) as published,
+          SUM(CASE WHEN is_published = false THEN 1 ELSE 0 END) as unpublished
         FROM announcements
       `),
       
@@ -208,10 +208,10 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as last_7_days,
-          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as last_30_days,
-          COUNT(*) FILTER (WHERE action = 'login') as login_count,
-          COUNT(*) FILTER (WHERE action LIKE '%upload%') as upload_count
+          SUM(CASE WHEN created_at >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END) as last_7_days,
+          SUM(CASE WHEN created_at >= NOW() - INTERVAL '30 days' THEN 1 ELSE 0 END) as last_30_days,
+          SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as login_count,
+          SUM(CASE WHEN action LIKE '%upload%' THEN 1 ELSE 0 END) as upload_count
         FROM activity_logs
       `),
       
@@ -242,8 +242,8 @@ export async function GET() {
       }>(`
         SELECT 
           DATE(created_at) as date,
-          COUNT(*) FILTER (WHERE action = 'login') as logins,
-          COUNT(*) FILTER (WHERE action LIKE '%upload%') as uploads,
+          SUM(CASE WHEN action = 'login' THEN 1 ELSE 0 END) as logins,
+          SUM(CASE WHEN action LIKE '%upload%' THEN 1 ELSE 0 END) as uploads,
           COUNT(*) as total
         FROM activity_logs
         WHERE created_at >= NOW() - INTERVAL '14 days'
@@ -284,7 +284,7 @@ export async function GET() {
       }>(`
         SELECT 
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE is_active = true) as active
+          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active
         FROM branches
       `),
     ]);
