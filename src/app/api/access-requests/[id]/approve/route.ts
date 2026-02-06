@@ -5,6 +5,7 @@ import { query, queryOne, transaction } from '@/lib/db';
 import { AccessRequest } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(
   request: NextRequest,
@@ -75,6 +76,10 @@ export async function POST(
       price_group_ids,
       branch_ids: branch_ids || [],
     });
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/requests');
+    revalidatePath('/admin/users');
 
     return NextResponse.json({ success: true });
   } catch (error) {
