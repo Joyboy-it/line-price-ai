@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function DELETE(
   request: NextRequest,
@@ -39,6 +40,9 @@ export async function DELETE(
       `DELETE FROM user_branches WHERE user_id = $1 AND branch_id = $2`,
       [userId, branchId]
     );
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin/branches');
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -77,6 +81,9 @@ export async function POST(
         [userId, branchId]
       );
     }
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin/branches');
 
     return NextResponse.json({ success: true });
   } catch (error) {

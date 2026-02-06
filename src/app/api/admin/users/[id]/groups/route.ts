@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(
   request: NextRequest,
@@ -31,6 +32,9 @@ export async function POST(
         [userId, groupId, session.user.id]
       );
     }
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin/manage-groups');
 
     return NextResponse.json({ success: true });
   } catch (error) {
