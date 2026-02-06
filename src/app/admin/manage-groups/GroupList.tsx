@@ -122,7 +122,7 @@ export default function GroupList({ groups, branches }: GroupListProps) {
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     {(group as any).user_count !== undefined && (
                       <span>👥 {(group as any).user_count} ผู้ใช้</span>
                     )}
@@ -130,6 +130,24 @@ export default function GroupList({ groups, branches }: GroupListProps) {
                       <span>🖼️ {(group as any).image_count} รูป</span>
                     )}
                     <span>🔢 ลำดับ: {group.sort_order}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      group.line_group_id 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${group.line_group_id ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      LINE
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      group.telegram_chat_id 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${group.telegram_chat_id ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      Telegram
+                    </span>
                   </div>
                 </div>
               </div>
