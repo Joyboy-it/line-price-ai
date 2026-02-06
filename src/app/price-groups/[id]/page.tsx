@@ -13,9 +13,17 @@ interface PageProps {
 
 async function getPriceGroup(id: string): Promise<PriceGroup | null> {
   return queryOne<PriceGroup>(
-    `SELECT pg.*, b.name as branch_name
+    `SELECT pg.*,
+       CASE 
+         WHEN pg.branch_id IS NULL THEN NULL
+         WHEN pg.branch_id LIKE '%,%' THEN (
+           SELECT STRING_AGG(b.name, ', ' ORDER BY b.name)
+           FROM branches b
+           WHERE b.id::TEXT = ANY(STRING_TO_ARRAY(pg.branch_id, ','))
+         )
+         ELSE (SELECT name FROM branches WHERE id::TEXT = pg.branch_id LIMIT 1)
+       END as branch_name
      FROM price_groups pg
-     LEFT JOIN branches b ON b.id = pg.branch_id
      WHERE pg.id = $1 AND pg.is_active = true`,
     [id]
   );
