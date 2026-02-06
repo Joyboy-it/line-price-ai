@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(
   request: NextRequest,
@@ -71,6 +72,9 @@ export async function PATCH(
 
     await logActionWithIp(request, session.user.id, 'update_group', 'price_group', id, { name });
 
+    revalidatePath('/admin/manage-groups');
+    revalidatePath('/admin/price-images');
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating price group:', error);
@@ -102,6 +106,9 @@ export async function DELETE(
     await query(`DELETE FROM price_groups WHERE id = $1`, [id]);
 
     await logActionWithIp(request, session.user.id, 'delete_group', 'price_group', id, { name: group.name });
+
+    revalidatePath('/admin/manage-groups');
+    revalidatePath('/admin/price-images');
 
     return NextResponse.json({ success: true });
   } catch (error) {
