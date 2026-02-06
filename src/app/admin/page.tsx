@@ -153,32 +153,44 @@ export default async function AdminDashboardPage() {
 
       {/* Pending Requests */}
       <section className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">คำขอที่รออนุมัติ</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">คำขอที่รออนุมัติ</h2>
+          {pendingRequests.length > 0 && (
+            <Link
+              href="/admin/requests"
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              ดูทั้งหมด →
+            </Link>
+          )}
+        </div>
         <div className="bg-white rounded-lg border border-gray-200">
           {pendingRequests.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              ไม่มีคำขอที่รออนุมัติ
+              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+              <p>ไม่มีคำขอที่รออนุมัติ</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {pendingRequests.map((request) => (
-                <div key={request.id} className="p-4 flex items-center justify-between">
+                <div key={request.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-yellow-600" />
                     </div>
                     <div>
                       <p className="font-medium text-gray-800">
                         {typeof request.user === 'object' ? request.user.name : 'Unknown'}
                       </p>
                       <p className="text-sm text-gray-500">ร้าน: {request.shop_name}</p>
+                      <p className="text-xs text-gray-400">{formatRelativeTime(request.created_at)}</p>
                     </div>
                   </div>
                   <Link
                     href={`/admin/requests/${request.id}`}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
                   >
-                    อนุมัติแล้ว
+                    ดูรายละเอียด
                   </Link>
                 </div>
               ))}
