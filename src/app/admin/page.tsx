@@ -153,17 +153,7 @@ export default async function AdminDashboardPage() {
 
       {/* Pending Requests */}
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">คำขอที่รออนุมัติ</h2>
-          {pendingRequests.length > 0 && (
-            <Link
-              href="/admin/requests"
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              ดูทั้งหมด →
-            </Link>
-          )}
-        </div>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">คำขอที่รออนุมัติ</h2>
         <div className="bg-white rounded-lg border border-gray-200">
           {pendingRequests.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
