@@ -130,8 +130,6 @@ export default function GroupList({ groups, branches }: GroupListProps) {
                       <span>🖼️ {(group as any).image_count} รูป</span>
                     )}
                     <span>🔢 ลำดับ: {group.sort_order}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                       group.line_group_id 
                         ? 'bg-green-100 text-green-700' 
