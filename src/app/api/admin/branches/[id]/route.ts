@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(
   request: NextRequest,
@@ -65,6 +66,9 @@ export async function PATCH(
       code,
     });
 
+    revalidatePath('/admin/branches');
+    revalidatePath('/admin/manage-groups');
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating branch:', error);
@@ -110,6 +114,9 @@ export async function DELETE(
     await logActionWithIp(request, session.user.id, 'delete_branch', 'branch', id, {
       name: (branch as any).name,
     });
+
+    revalidatePath('/admin/branches');
+    revalidatePath('/admin/manage-groups');
 
     return NextResponse.json({ success: true });
   } catch (error) {

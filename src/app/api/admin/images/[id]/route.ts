@@ -6,6 +6,7 @@ import { deleteFile } from '@/lib/storage';
 import { PriceGroupImage } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function DELETE(
   request: NextRequest,
@@ -36,6 +37,9 @@ export async function DELETE(
       price_group_id: image.price_group_id,
       file_name: image.file_name,
     });
+
+    revalidatePath('/admin/price-images');
+    revalidatePath(`/price-groups/${image.price_group_id}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

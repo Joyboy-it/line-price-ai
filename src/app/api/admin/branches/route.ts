@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { Branch } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function GET() {
   try {
@@ -59,6 +60,9 @@ export async function POST(request: NextRequest) {
       name,
       code,
     });
+
+    revalidatePath('/admin/branches');
+    revalidatePath('/admin/manage-groups');
 
     return NextResponse.json((branch as any)[0]);
   } catch (error) {

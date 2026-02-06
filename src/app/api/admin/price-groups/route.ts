@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -62,6 +63,9 @@ export async function POST(request: NextRequest) {
     );
 
     await logActionWithIp(request, session.user.id, 'create_group', 'price_group', newGroup?.id, { name });
+
+    revalidatePath('/admin/manage-groups');
+    revalidatePath('/admin/price-images');
 
     return NextResponse.json(newGroup, { status: 201 });
   } catch (error) {

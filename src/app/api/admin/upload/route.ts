@@ -10,6 +10,7 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { logActionWithIp } from '@/lib/log-helper';
 import { uploadFile } from '@/lib/storage';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -128,6 +129,9 @@ export async function POST(request: NextRequest) {
       file_name: uploadResult.fileName,
       file_size: uploadResult.fileSize,
     });
+
+    revalidatePath('/admin/price-images');
+    revalidatePath(`/price-groups/${priceGroupId}`);
 
     return NextResponse.json(image, { status: 201 });
   } catch (error) {

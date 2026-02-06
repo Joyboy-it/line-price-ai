@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { User } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(
   request: NextRequest,
@@ -113,6 +114,9 @@ export async function PATCH(
       is_active,
     });
 
+    revalidatePath('/admin/users');
+    revalidatePath('/admin');
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating user:', error);
@@ -150,6 +154,9 @@ export async function DELETE(
     await logActionWithIp(request, session.user.id, 'delete_user', 'user', id, {
       name: user.name,
     });
+
+    revalidatePath('/admin/users');
+    revalidatePath('/admin');
 
     return NextResponse.json({ success: true });
   } catch (error) {
