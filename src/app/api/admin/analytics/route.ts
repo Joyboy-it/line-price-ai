@@ -139,7 +139,7 @@ export async function GET() {
        ) last_log ON last_log.user_id = u.id
        WHERE u.is_active = true
        ORDER BY last_log.last_activity ASC NULLS FIRST
-       LIMIT 10`
+       LIMIT 20`
     );
 
     const totalGroupsCount = parseInt(totalGroups[0]?.count || '0');
