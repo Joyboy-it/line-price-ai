@@ -6,20 +6,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Users,
-  UserCheck,
-  UserX,
   Tag,
   Image as ImageIcon,
-  Megaphone,
-  TrendingUp,
-  TrendingDown,
-  Activity,
   Clock,
-  AlertTriangle,
   BarChart3,
-  Calendar,
   ArrowLeft,
+  RefreshCw,
+  Shield,
+  Upload,
+  LogIn,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
+  Megaphone,
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -63,7 +62,6 @@ interface AnalyticsData {
     last30Days: number;
     loginCount: number;
     uploadCount: number;
-    dailyTrend: { date: string; logins: number; uploads: number }[];
     topUsers: { userId: string; userName: string; activityCount: number }[];
   };
   inactiveUsers: {
@@ -76,12 +74,23 @@ interface AnalyticsData {
   }[];
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'แอดมิน',
+  operator: 'โอเปอเรเตอร์',
+  worker: 'พนักงาน',
+  user: 'ผู้ใช้ทั่วไป',
+};
+
+function pct(value: number, total: number): number {
+  return total > 0 ? Math.round((value / total) * 100) : 0;
+}
+
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'7days' | '30days' | 'all'>('30days');
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -98,391 +107,417 @@ export default function AnalyticsPage() {
   }, []);
 
   const fetchAnalytics = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    }
+    if (isRefresh) setRefreshing(true);
+    setError(null);
     try {
-      const response = await fetch('/api/admin/analytics', {
-        cache: 'no-store',
-      });
+      const response = await fetch('/api/admin/analytics', { cache: 'no-store' });
       if (response.ok) {
-        const result = await response.json();
-        setData(result);
+        setData(await response.json());
         setLastUpdated(new Date());
+      } else {
+        setError('ไม่สามารถโหลดข้อมูลได้');
       }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
+    } catch {
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const SkeletonCard = () => (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-      </div>
-      <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
-      <div className="h-4 bg-gray-200 rounded w-32"></div>
-    </div>
-  );
-
-  if (loading || !data) {
+  // ── Loading State ──
+  if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div>
-              <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div className="w-20 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
-          </div>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="h-5 bg-gray-200 rounded w-16 mb-4 animate-pulse"></div>
+          <div className="h-8 bg-gray-200 rounded w-56 mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-40 animate-pulse"></div>
         </div>
-
-        {/* Stats Skeleton */}
-        <section className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        </section>
-
-        {/* More Skeletons */}
-        <section className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        </section>
-
-        <div className="text-center mt-8">
-          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล Analytics...</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border p-5 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-20 mb-3"></div>
+              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-24"></div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border p-6 animate-pulse">
+              <div className="h-5 bg-gray-200 rounded w-32 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    subtitle, 
-    color = 'bg-gray-50',
-  }: { 
-    title: string; 
-    value: number | string; 
-    subtitle?: string; 
-    color?: string;
-  }) => (
-    <div className={`${color} rounded-lg p-6 border border-gray-200`}>
-      <p className="text-sm text-gray-600 mb-2">{title}</p>
-      <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
-      {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
-    </div>
-  );
+  // ── Error State ──
+  if (error || !data) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <Link href="/admin" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
+          <ArrowLeft className="w-4 h-4" /> กลับ
+        </Link>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+          <p className="text-red-700 font-medium mb-4">{error || 'ไม่สามารถโหลดข้อมูลได้'}</p>
+          <button
+            onClick={() => fetchAnalytics(true)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+          >
+            ลองใหม่
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* ── Header ── */}
       <div className="mb-8">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                กลับ Dashboard
-              </Link>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-            </div>
+        <Link href="/admin" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4">
+          <ArrowLeft className="w-4 h-4" /> กลับ
+        </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              สถิติและรายงานการใช้งานระบบ
+              {lastUpdated && (
+                <span className="ml-2 text-gray-400">
+                  • อัปเดต {lastUpdated.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </p>
+          </div>
           <button
             onClick={() => fetchAnalytics(true)}
             disabled={refreshing}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            {refreshing ? 'กำลังรีเฟรช...' : 'รีเฟรช'}
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'กำลังโหลด...' : 'รีเฟรช'}
           </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="text-gray-600">สถิติและรายงานการใช้งานระบบ</p>
-          {lastUpdated && (
-            <span className="text-sm text-gray-400">
-              • อัปเดต: {lastUpdated.toLocaleTimeString('th-TH')}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Overview Stats */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">ภาพรวมระบบ</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="ผู้ใช้ทั้งหมด"
-            value={data.users.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.users.newLast7Days : data.users.newLast30Days} คน`}
-            color="bg-blue-50"
-          />
-          <StatCard
-            title="ผู้ใช้ที่มีสิทธิ์"
-            value={data.users.withAccess}
-            subtitle={`${Math.round((data.users.withAccess / data.users.total) * 100)}% ของทั้งหมด`}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="กลุ่มราคา"
-            value={data.priceGroups.total}
-            subtitle={`Active ${data.priceGroups.active} กลุ่ม`}
-            color="bg-purple-50"
-          />
-          <StatCard
-            title="รูปภาพทั้งหมด"
-            value={data.images.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.images.last7Days : data.images.last30Days} รูป`}
-            color="bg-orange-50"
-          />
-        </div>
-      </section>
-
-      {/* User Statistics */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติผู้ใช้งาน</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="ผู้ใช้ Active"
-            value={data.users.active}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="ผู้ใช้ Inactive"
-            value={data.users.inactive}
-            color="bg-gray-50"
-          />
-          <StatCard
-            title="ยังไม่มีสิทธิ์"
-            value={data.users.withoutAccess}
-            color="bg-yellow-50"
-          />
-          <StatCard
-            title="คำขอรออนุมัติ"
-            value={data.requests.pending}
-            color="bg-red-50"
-          />
+      {/* ── Overview Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-gray-600">ผู้ใช้ทั้งหมด</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{data.users.total}</p>
+          <p className="text-xs text-gray-500 mt-1">ใหม่ 30 วัน: +{data.users.newLast30Days}</p>
         </div>
 
-        {/* Users by Role */}
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">ผู้ใช้แยกตามบทบาท</h3>
-          <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-green-500" />
+            <span className="text-sm text-gray-600">มีสิทธิ์เข้าใช้</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{data.users.withAccess}</p>
+          <p className="text-xs text-gray-500 mt-1">{pct(data.users.withAccess, data.users.total)}% ของทั้งหมด</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag className="w-4 h-4 text-purple-500" />
+            <span className="text-sm text-gray-600">กลุ่มราคา</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{data.priceGroups.active}<span className="text-lg text-gray-400">/{data.priceGroups.total}</span></p>
+          <p className="text-xs text-gray-500 mt-1">active / ทั้งหมด</p>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ImageIcon className="w-4 h-4 text-orange-500" />
+            <span className="text-sm text-gray-600">รูปภาพ</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{data.images.total}</p>
+          <p className="text-xs text-gray-500 mt-1">ใหม่ 7 วัน: +{data.images.last7Days}</p>
+        </div>
+      </div>
+
+      {/* ── Two Column Layout ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+        {/* คำขอสิทธิ์ */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-800 mb-4">คำขอสิทธิ์</h2>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="text-center p-3 bg-yellow-50 rounded-lg">
+              <Clock className="w-5 h-5 text-yellow-600 mx-auto mb-1" />
+              <p className="text-xl font-bold text-gray-900">{data.requests.pending}</p>
+              <p className="text-xs text-gray-500">รออนุมัติ</p>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 mx-auto mb-1" />
+              <p className="text-xl font-bold text-gray-900">{data.requests.approved}</p>
+              <p className="text-xs text-gray-500">อนุมัติ</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <XCircle className="w-5 h-5 text-red-600 mx-auto mb-1" />
+              <p className="text-xl font-bold text-gray-900">{data.requests.rejected}</p>
+              <p className="text-xs text-gray-500">ปฏิเสธ</p>
+            </div>
+          </div>
+          {data.requests.total > 0 && (
+            <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
+              <div className="bg-green-500" style={{ width: `${pct(data.requests.approved, data.requests.total)}%` }} />
+              <div className="bg-yellow-400" style={{ width: `${pct(data.requests.pending, data.requests.total)}%` }} />
+              <div className="bg-red-400" style={{ width: `${pct(data.requests.rejected, data.requests.total)}%` }} />
+            </div>
+          )}
+          <div className="flex justify-between mt-3 text-xs text-gray-500">
+            <span>ทั้งหมด {data.requests.total} คำขอ</span>
+            <span>ใหม่ 30 วัน: {data.requests.last30Days}</span>
+          </div>
+        </div>
+
+        {/* ผู้ใช้แยกตามบทบาท */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-800 mb-4">ผู้ใช้แยกตามบทบาท</h2>
+          <div className="space-y-3">
             {data.users.byRole.map((role) => (
-              <div key={role.role} className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold text-gray-800">{role.count}</p>
-                <p className="text-sm text-gray-600 capitalize">{role.role}</p>
+              <div key={role.role} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${
+                    role.role === 'admin' ? 'bg-red-500' :
+                    role.role === 'operator' ? 'bg-blue-500' :
+                    role.role === 'worker' ? 'bg-green-500' : 'bg-gray-400'
+                  }`} />
+                  <span className="text-sm text-gray-700">{ROLE_LABELS[role.role] || role.role}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        role.role === 'admin' ? 'bg-red-500' :
+                        role.role === 'operator' ? 'bg-blue-500' :
+                        role.role === 'worker' ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                      style={{ width: `${pct(role.count, data.users.total)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900 w-8 text-right">{role.count}</span>
+                </div>
               </div>
             ))}
           </div>
+          <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between text-xs text-gray-500">
+            <span>Active: {data.users.active}</span>
+            <span>Inactive: {data.users.inactive}</span>
+            <span>ไม่มีสิทธิ์: {data.users.withoutAccess}</span>
+          </div>
         </div>
-      </section>
+      </div>
 
-      {/* Inactive Users Alert */}
-      {data.inactiveUsers.length > 0 && (
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">ผู้ใช้ที่ไม่ได้เข้าใช้งาน (30+ วัน)</h2>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <p className="text-sm text-gray-700">
-                ไม่ได้เข้าใช้งานมากกว่า 30 วัน: <strong className="text-gray-900">{data.inactiveUsers.length}</strong> คน
-              </p>
+      {/* ── กิจกรรมระบบ ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+        {/* กิจกรรม 30 วันล่าสุด */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-800 mb-4">กิจกรรม 30 วันล่าสุด</h2>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+              <LogIn className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-lg font-bold text-gray-900">{data.activity.loginCount}</p>
+                <p className="text-xs text-gray-500">เข้าสู่ระบบ</p>
+              </div>
             </div>
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อผู้ใช้</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ร้าน</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">เข้าใช้ครั้งล่าสุด</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ไม่ได้ใช้งาน</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">การดำเนินการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data.inactiveUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-xs text-gray-500">{user.email}</div>
+            <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+              <Upload className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-lg font-bold text-gray-900">{data.activity.uploadCount}</p>
+                <p className="text-xs text-gray-500">อัพโหลดรูป</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+            <span>กิจกรรมทั้งหมด: {data.activity.totalLogs}</span>
+            <span>7 วัน: {data.activity.last7Days} | 30 วัน: {data.activity.last30Days}</span>
+          </div>
+        </div>
+
+        {/* ข้อมูลเพิ่มเติม */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-800 mb-4">ข้อมูลเพิ่มเติม</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-purple-500" />
+                <span className="text-sm text-gray-700">ประกาศ</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">
+                {data.announcements.published} เผยแพร่ / {data.announcements.total} ทั้งหมด
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-gray-700">รูปภาพใหม่ 30 วัน</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">+{data.images.last30Days} รูป</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-gray-700">ผู้ใช้ใหม่ 7 วัน</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">+{data.users.newLast7Days} คน</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── กลุ่มราคา ── */}
+      {data.priceGroups.usage.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 mb-8">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800">การใช้งานกลุ่มราคา</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left">ชื่อกลุ่ม</th>
+                  <th className="px-6 py-3 text-center">ผู้ใช้</th>
+                  <th className="px-6 py-3 text-center">รูปภาพ</th>
+                  <th className="px-6 py-3 text-left">สัดส่วนผู้ใช้</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.priceGroups.usage.map((group) => {
+                  const userPct = pct(group.userCount, data.users.withAccess || 1);
+                  return (
+                    <tr key={group.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-3">
+                        <span className="text-sm font-medium text-gray-900">{group.name}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {user.shopName || '-'}
+                      <td className="px-6 py-3 text-center">
+                        <span className="text-sm text-gray-700">{group.userCount}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('th-TH') : 'ไม่เคยเข้าใช้'}
+                      <td className="px-6 py-3 text-center">
+                        <span className="text-sm text-gray-700">{group.imageCount}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.daysInactive > 90 ? 'bg-red-100 text-red-700' :
-                          user.daysInactive > 60 ? 'bg-orange-100 text-orange-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {user.daysInactive > 0 ? `${user.daysInactive} วัน` : 'ไม่เคยเข้าใช้'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link
-                          href={`/admin/users/${user.id}`}
-                          className="text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          ดูรายละเอียด
-                        </Link>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-green-500 h-full rounded-full" style={{ width: `${userPct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500 w-10 text-right">{userPct}%</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Request Statistics */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติคำขอสิทธิ์</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="คำขอทั้งหมด"
-            value={data.requests.total}
-            subtitle={`ใหม่ ${filter === '7days' ? data.requests.last7Days : data.requests.last30Days} คำขอ`}
-          />
-          <StatCard
-            title="รออนุมัติ"
-            value={data.requests.pending}
-            color="bg-yellow-50"
-          />
-          <StatCard
-            title="อนุมัติแล้ว"
-            value={data.requests.approved}
-            subtitle={`${Math.round((data.requests.approved / data.requests.total) * 100)}% ของทั้งหมด`}
-            color="bg-green-50"
-          />
-          <StatCard
-            title="ปฏิเสธแล้ว"
-            value={data.requests.rejected}
-            subtitle={`${Math.round((data.requests.rejected / data.requests.total) * 100)}% ของทั้งหมด`}
-            color="bg-red-50"
-          />
-        </div>
-      </section>
-
-      {/* Price Groups Usage */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">การใช้งานกลุ่มราคา</h2>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">ชื่อกลุ่ม</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">ผู้ใช้</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">รูปภาพ</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">%</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {data.priceGroups.usage.map((group) => (
-                <tr key={group.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{group.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{group.userCount}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{group.imageCount}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${Math.min((group.userCount / data.users.total) * 100, 100)}%` }}
-                      ></div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Top Active Users */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">ผู้ใช้ที่ Active ที่สุด</h2>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="space-y-3">
+      {/* ── Top Active Users ── */}
+      {data.activity.topUsers.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 mb-8">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800">ผู้ใช้ที่ Active ที่สุด (30 วัน)</h2>
+          </div>
+          <div className="divide-y divide-gray-100">
             {data.activity.topUsers.map((user, index) => (
-              <div key={user.userId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={user.userId} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold bg-gray-200 text-gray-700">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    index < 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
                     {index + 1}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800">{user.userName}</p>
-                    <p className="text-sm text-gray-500">{user.activityCount} กิจกรรม</p>
-                  </div>
+                  </span>
+                  <span className="text-sm font-medium text-gray-800">{user.userName}</span>
                 </div>
-                <Link
-                  href={`/admin/users/${user.userId}`}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  ดูรายละเอียด
-                </Link>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500">{user.activityCount} กิจกรรม</span>
+                  <Link
+                    href={`/admin/users/${user.userId}`}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    ดู
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      )}
 
-      {/* Other Stats */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">สถิติอื่นๆ</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            title="ประกาศทั้งหมด"
-            value={data.announcements.total}
-            subtitle={`เผยแพร่ ${data.announcements.published} รายการ`}
-            color="bg-purple-50"
-          />
-          <StatCard
-            title="กิจกรรมทั้งหมด"
-            value={data.activity.totalLogs}
-            subtitle={`${filter === '7days' ? data.activity.last7Days : data.activity.last30Days} กิจกรรมล่าสุด`}
-            color="bg-indigo-50"
-          />
-          <StatCard
-            title="การเข้าสู่ระบบ"
-            value={data.activity.loginCount}
-            subtitle="ทั้งหมด"
-            color="bg-cyan-50"
-          />
+      {/* ── Inactive Users ── */}
+      {data.inactiveUsers.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <h2 className="font-semibold text-gray-800">ผู้ใช้ที่ไม่ได้เข้าใช้งาน (30+ วัน)</h2>
+            </div>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
+              {data.inactiveUsers.length} คน
+            </span>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr className="text-xs text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left">ชื่อผู้ใช้</th>
+                  <th className="px-6 py-3 text-left">ร้าน</th>
+                  <th className="px-6 py-3 text-left">เข้าใช้ล่าสุด</th>
+                  <th className="px-6 py-3 text-left">ไม่ได้ใช้งาน</th>
+                  <th className="px-6 py-3 text-right"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.inactiveUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-3">
+                      <div className="text-sm font-medium text-gray-900">{user.name || '-'}</div>
+                      <div className="text-xs text-gray-400">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-600">{user.shopName || '-'}</td>
+                    <td className="px-6 py-3 text-sm text-gray-600">
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : 'ไม่เคย'}
+                    </td>
+                    <td className="px-6 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        user.daysInactive > 90 ? 'bg-red-100 text-red-700' :
+                        user.daysInactive > 60 ? 'bg-orange-100 text-orange-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {user.daysInactive > 0 ? `${user.daysInactive} วัน` : 'ไม่เคย'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <Link href={`/admin/users/${user.id}`} className="text-xs text-blue-600 hover:text-blue-800">
+                        ดู
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }

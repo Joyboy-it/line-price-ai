@@ -10,7 +10,6 @@ let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 300; // 5 minutes
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -26,117 +25,144 @@ export async function GET() {
   }
 
   try {
-    console.log('[Analytics API] Starting data fetch...');
-    
-    // Test basic query
-    const testResult = await query<{ count: string }>(`SELECT 1 as test`);
-    console.log('[Analytics API] Test query result:', testResult);
-    
-    // Minimal queries for basic stats
-    const totalUsers = await query<{ count: string }>(`SELECT COUNT(*) as count FROM users`);
-    console.log('[Analytics API] Users query result:', totalUsers);
-    
-    const totalGroups = await query<{ count: string }>(`SELECT COUNT(*) as count FROM price_groups`);
-    const totalImages = await query<{ count: string }>(`SELECT COUNT(*) as count FROM price_group_images`);
-    
-    console.log('[Analytics API] Basic stats fetched');
-    
-    // Empty arrays for all other data
-    const activeUsers = [{ count: '0' }];
-    const inactiveUsers = [{ count: '0' }];
-    const usersWithAccess = [{ count: '0' }];
-    const usersWithoutAccess = [{ count: '0' }];
-    const newUsersLast7Days = [{ count: '0' }];
-    const newUsersLast30Days = [{ count: '0' }];
-    const totalRequests = [{ count: '0' }];
-    const pendingRequests = [{ count: '0' }];
-    const approvedRequests = [{ count: '0' }];
-    const rejectedRequests = [{ count: '0' }];
-    const requestsLast7Days = [{ count: '0' }];
-    const requestsLast30Days = [{ count: '0' }];
-    const activeGroups = [{ count: '0' }];
-    const inactiveGroups = [{ count: '0' }];
-    const imagesLast7Days = [{ count: '0' }];
-    const imagesLast30Days = [{ count: '0' }];
-    const totalAnnouncements = [{ count: '0' }];
-    const publishedAnnouncements = [{ count: '0' }];
-    const unpublishedAnnouncements = [{ count: '0' }];
-    const totalLogs = [{ count: '0' }];
-    const logsLast7Days = [{ count: '0' }];
-    const logsLast30Days = [{ count: '0' }];
-    const loginCount = [{ count: '0' }];
-    const uploadCount = [{ count: '0' }];
-    const usersByRole: any[] = [];
-    const inactiveUsersList: any[] = [];
-    const dailyActivity: any[] = [];
-    const topActiveUsers: any[] = [];
-    const groupsUsage: any[] = [];
-    
-    // LINE API Usage Statistics
-    let lineUsage = {
-      totalMessages: 0,
-      thisMonth: 0,
-      lastMonth: 0,
-      freeQuotaRemaining: 1000,
-      error: null as string | null,
-    };
+    // ── User Stats ──
+    const [
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      usersWithAccess,
+      newUsersLast7Days,
+      newUsersLast30Days,
+      usersByRole,
+    ] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM users`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM users WHERE is_active = true`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM users WHERE is_active = false`),
+      query<{ count: string }>(`SELECT COUNT(DISTINCT user_id) as count FROM user_group_access`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '7 days'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - INTERVAL '30 days'`),
+      query<{ role: string; count: string }>(`SELECT role, COUNT(*) as count FROM users GROUP BY role ORDER BY count DESC`),
+    ]);
 
-    const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-    if (LINE_CHANNEL_ACCESS_TOKEN) {
-      try {
-        // ดึงข้อมูลการใช้งาน LINE API
-        const lineResponse = await fetch('https://api.line.me/v2/bot/message/quota/consumption', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
-          },
-        });
+    const totalUsersCount = parseInt(totalUsers[0]?.count || '0');
+    const withAccessCount = parseInt(usersWithAccess[0]?.count || '0');
 
-        if (lineResponse.ok) {
-          const lineData = await lineResponse.json();
-          lineUsage = {
-            totalMessages: lineData.totalUsage || 0,
-            thisMonth: lineData.totalUsage || 0,
-            lastMonth: 0,
-            freeQuotaRemaining: Math.max(0, 1000 - (lineData.totalUsage || 0)),
-            error: null,
-          };
-        } else {
-          lineUsage.error = `LINE API Error: ${lineResponse.status}`;
-        }
-      } catch (lineError) {
-        console.error('[Analytics API] LINE usage fetch error:', lineError);
-        lineUsage.error = lineError instanceof Error ? lineError.message : 'Unknown error';
-      }
-    } else {
-      lineUsage.error = 'LINE_CHANNEL_ACCESS_TOKEN not configured';
-    }
-    
-    console.log('[Analytics API] All data fetched successfully');
+    // ── Request Stats ──
+    const [
+      totalRequests,
+      pendingRequests,
+      approvedRequests,
+      rejectedRequests,
+      requestsLast7Days,
+      requestsLast30Days,
+    ] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests WHERE status = 'pending'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests WHERE status = 'approved'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests WHERE status = 'rejected'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests WHERE created_at >= NOW() - INTERVAL '7 days'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM access_requests WHERE created_at >= NOW() - INTERVAL '30 days'`),
+    ]);
+
+    // ── Price Groups & Images ──
+    const [
+      totalGroups,
+      activeGroups,
+      totalImages,
+      imagesLast7Days,
+      imagesLast30Days,
+      groupsUsage,
+    ] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM price_groups`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM price_groups WHERE is_active = true`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM price_group_images`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM price_group_images WHERE created_at >= NOW() - INTERVAL '7 days'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM price_group_images WHERE created_at >= NOW() - INTERVAL '30 days'`),
+      query<{ group_id: string; group_name: string; user_count: string; image_count: string }>(
+        `SELECT pg.id as group_id, pg.name as group_name,
+          (SELECT COUNT(*) FROM user_group_access uga WHERE uga.price_group_id = pg.id) as user_count,
+          (SELECT COUNT(*) FROM price_group_images pgi WHERE pgi.price_group_id = pg.id) as image_count
+         FROM price_groups pg
+         WHERE pg.is_active = true
+         ORDER BY user_count DESC, pg.sort_order`
+      ),
+    ]);
+
+    // ── Announcements ──
+    const [totalAnnouncements, publishedAnnouncements] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM announcements`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM announcements WHERE is_published = true`),
+    ]);
+
+    // ── Activity Logs ──
+    const [
+      totalLogs,
+      logsLast7Days,
+      logsLast30Days,
+      loginCount,
+      uploadCount,
+      topActiveUsers,
+    ] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs WHERE created_at >= NOW() - INTERVAL '7 days'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs WHERE created_at >= NOW() - INTERVAL '30 days'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs WHERE action = 'login'`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs WHERE action = 'upload_image'`),
+      query<{ user_id: string; user_name: string; activity_count: string }>(
+        `SELECT ul.user_id, u.name as user_name, COUNT(*) as activity_count
+         FROM user_logs ul
+         JOIN users u ON u.id = ul.user_id
+         WHERE ul.created_at >= NOW() - INTERVAL '30 days'
+         GROUP BY ul.user_id, u.name
+         ORDER BY activity_count DESC
+         LIMIT 10`
+      ),
+    ]);
+
+    // ── Inactive Users (30+ days) ──
+    const inactiveUsersList = await query<{
+      id: string; name: string; email: string; shop_name: string;
+      last_login: string | null; days_inactive: string;
+    }>(
+      `SELECT u.id, u.name, u.email, u.shop_name,
+        u.last_login_at as last_login,
+        COALESCE(EXTRACT(DAY FROM NOW() - u.last_login_at)::INT, 999) as days_inactive
+       FROM users u
+       WHERE u.is_active = true
+         AND (u.last_login_at IS NULL OR u.last_login_at < NOW() - INTERVAL '30 days')
+       ORDER BY u.last_login_at ASC NULLS FIRST
+       LIMIT 20`
+    );
+
+    const totalGroupsCount = parseInt(totalGroups[0]?.count || '0');
+    const activeGroupsCount = parseInt(activeGroups[0]?.count || '0');
+    const totalRequestsCount = parseInt(totalRequests[0]?.count || '0');
+    const approvedCount = parseInt(approvedRequests[0]?.count || '0');
+    const rejectedCount = parseInt(rejectedRequests[0]?.count || '0');
 
     const result = {
       users: {
-        total: parseInt(totalUsers[0]?.count || '0'),
+        total: totalUsersCount,
         active: parseInt(activeUsers[0]?.count || '0'),
         inactive: parseInt(inactiveUsers[0]?.count || '0'),
-        withAccess: parseInt(usersWithAccess[0]?.count || '0'),
-        withoutAccess: parseInt(usersWithoutAccess[0]?.count || '0'),
+        withAccess: withAccessCount,
+        withoutAccess: totalUsersCount - withAccessCount,
         newLast7Days: parseInt(newUsersLast7Days[0]?.count || '0'),
         newLast30Days: parseInt(newUsersLast30Days[0]?.count || '0'),
         byRole: usersByRole.map(r => ({ role: r.role, count: parseInt(r.count) })),
       },
       requests: {
-        total: parseInt(totalRequests[0]?.count || '0'),
+        total: totalRequestsCount,
         pending: parseInt(pendingRequests[0]?.count || '0'),
-        approved: parseInt(approvedRequests[0]?.count || '0'),
-        rejected: parseInt(rejectedRequests[0]?.count || '0'),
+        approved: approvedCount,
+        rejected: rejectedCount,
         last7Days: parseInt(requestsLast7Days[0]?.count || '0'),
         last30Days: parseInt(requestsLast30Days[0]?.count || '0'),
       },
       priceGroups: {
-        total: parseInt(totalGroups[0]?.count || '0'),
-        active: parseInt(activeGroups[0]?.count || '0'),
-        inactive: parseInt(inactiveGroups[0]?.count || '0'),
+        total: totalGroupsCount,
+        active: activeGroupsCount,
+        inactive: totalGroupsCount - activeGroupsCount,
         usage: groupsUsage.map(g => ({
           id: g.group_id,
           name: g.group_name,
@@ -152,7 +178,7 @@ export async function GET() {
       announcements: {
         total: parseInt(totalAnnouncements[0]?.count || '0'),
         published: parseInt(publishedAnnouncements[0]?.count || '0'),
-        unpublished: parseInt(unpublishedAnnouncements[0]?.count || '0'),
+        unpublished: parseInt(totalAnnouncements[0]?.count || '0') - parseInt(publishedAnnouncements[0]?.count || '0'),
       },
       activity: {
         totalLogs: parseInt(totalLogs[0]?.count || '0'),
@@ -160,11 +186,6 @@ export async function GET() {
         last30Days: parseInt(logsLast30Days[0]?.count || '0'),
         loginCount: parseInt(loginCount[0]?.count || '0'),
         uploadCount: parseInt(uploadCount[0]?.count || '0'),
-        dailyTrend: dailyActivity.map(d => ({
-          date: d.date,
-          logins: parseInt(d.logins),
-          uploads: parseInt(d.uploads),
-        })),
         topUsers: topActiveUsers.map(u => ({
           userId: u.user_id,
           userName: u.user_name,
@@ -179,15 +200,6 @@ export async function GET() {
         lastLogin: u.last_login,
         daysInactive: parseInt(u.days_inactive?.toString() || '0'),
       })),
-      lineUsage: {
-        totalMessages: lineUsage.totalMessages,
-        thisMonth: lineUsage.thisMonth,
-        lastMonth: lineUsage.lastMonth,
-        freeQuotaRemaining: lineUsage.freeQuotaRemaining,
-        freeQuotaLimit: 1000,
-        percentUsed: Math.round((lineUsage.thisMonth / 1000) * 100),
-        error: lineUsage.error,
-      },
     };
 
     // Cache the result
