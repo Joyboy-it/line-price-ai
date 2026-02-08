@@ -119,28 +119,8 @@ export async function GET() {
       ),
     ]);
 
-    // ── Inactive Users (30+ days) — ใช้ user_logs เป็นหลัก ──
-    // Debug: ตรวจสอบจำนวน user_logs
-    const logCount = await query<{ count: string }>(`SELECT COUNT(*) as count FROM user_logs`);
-    const userCount = await query<{ count: string }>(`SELECT COUNT(*) as count FROM users WHERE is_active = true`);
-    console.log('[Analytics] user_logs count:', logCount[0]?.count, 'active users:', userCount[0]?.count);
-
-    // Debug: ดู last_activity ของทุก user
-    const debugActivities = await query<{ name: string; last_activity: string | null }>(
-      `SELECT u.name, last_log.last_activity
-       FROM users u
-       LEFT JOIN (
-         SELECT user_id, MAX(created_at) as last_activity
-         FROM user_logs
-         GROUP BY user_id
-       ) last_log ON last_log.user_id = u.id
-       WHERE u.is_active = true
-       ORDER BY last_log.last_activity ASC NULLS FIRST
-       LIMIT 10`
-    );
-    console.log('[Analytics] Debug user activities:', JSON.stringify(debugActivities));
-
-    const inactiveUsersList = await query<{
+    // ── ผู้ใช้เรียงตามกิจกรรมล่าสุด (น้อยสุดก่อน) ──
+    const leastActiveUsers = await query<{
       id: string; name: string; email: string; shop_name: string;
       last_activity: string | null; days_inactive: string;
     }>(
@@ -158,11 +138,9 @@ export async function GET() {
          GROUP BY user_id
        ) last_log ON last_log.user_id = u.id
        WHERE u.is_active = true
-         AND (last_log.last_activity IS NULL OR last_log.last_activity < NOW() - INTERVAL '30 days')
-       ORDER BY last_log.last_activity ASC NULLS LAST
-       LIMIT 20`
+       ORDER BY last_log.last_activity ASC NULLS FIRST
+       LIMIT 10`
     );
-    console.log('[Analytics] Inactive users found:', inactiveUsersList.length);
 
     const totalGroupsCount = parseInt(totalGroups[0]?.count || '0');
     const activeGroupsCount = parseInt(activeGroups[0]?.count || '0');
@@ -222,7 +200,7 @@ export async function GET() {
           activityCount: parseInt(u.activity_count),
         })),
       },
-      inactiveUsers: inactiveUsersList.map(u => ({
+      leastActiveUsers: leastActiveUsers.map(u => ({
         id: u.id,
         name: u.name,
         email: u.email,

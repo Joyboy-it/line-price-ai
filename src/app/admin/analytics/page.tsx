@@ -64,7 +64,7 @@ interface AnalyticsData {
     uploadCount: number;
     topUsers: { userId: string; userName: string; activityCount: number }[];
   };
-  inactiveUsers: {
+  leastActiveUsers: {
     id: string;
     name: string;
     email: string;
@@ -461,67 +461,71 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Inactive Users ── */}
-      {data.inactiveUsers.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <h2 className="font-semibold text-gray-800">ผู้ใช้ที่ไม่ได้เข้าใช้งาน (30+ วัน)</h2>
-            </div>
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
-              {data.inactiveUsers.length} คน
-            </span>
+      {/* ── ผู้ใช้ที่เข้าใช้งานน้อย ── */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <h2 className="font-semibold text-gray-800">ผู้ใช้เรียงตามกิจกรรมล่าสุด</h2>
           </div>
-          <div className="max-h-80 overflow-y-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr className="text-xs text-gray-500 uppercase">
-                  <th className="px-6 py-3 text-left">ชื่อผู้ใช้</th>
-                  <th className="px-6 py-3 text-left">ร้าน</th>
-                  <th className="px-6 py-3 text-left">กิจกรรมล่าสุด</th>
-                  <th className="px-6 py-3 text-left">ไม่ได้ใช้งาน</th>
-                  <th className="px-6 py-3 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {data.inactiveUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-3">
-                      <div className="text-sm font-medium text-gray-900">{user.name || '-'}</div>
-                      <div className="text-xs text-gray-400">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-600">{user.shopName || '-'}</td>
-                    <td className="px-6 py-3 text-sm text-gray-600">
-                      {user.lastActivity
-                        ? new Date(user.lastActivity).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' })
-                        : <span className="text-gray-400">ไม่มีบันทึก</span>}
-                    </td>
-                    <td className="px-6 py-3">
-                      {user.daysInactive != null ? (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          user.daysInactive > 90 ? 'bg-red-100 text-red-700' :
-                          user.daysInactive > 60 ? 'bg-orange-100 text-orange-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {user.daysInactive} วัน
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">ไม่มีบันทึก</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-3 text-right">
-                      <Link href={`/admin/logs?user=${encodeURIComponent(user.name || '')}`} className="text-xs text-blue-600 hover:text-blue-800">
-                        ดู Log
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <span className="text-xs text-gray-500">เข้าใช้น้อยสุดอยู่ด้านบน</span>
         </div>
-      )}
+        <div className="max-h-80 overflow-y-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr className="text-xs text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left">ชื่อผู้ใช้</th>
+                <th className="px-6 py-3 text-left">ร้าน</th>
+                <th className="px-6 py-3 text-left">กิจกรรมล่าสุด</th>
+                <th className="px-6 py-3 text-left">ห่างจากวันนี้</th>
+                <th className="px-6 py-3 text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data.leastActiveUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-3">
+                    <div className="text-sm font-medium text-gray-900">{user.name || '-'}</div>
+                    <div className="text-xs text-gray-400">{user.email}</div>
+                  </td>
+                  <td className="px-6 py-3 text-sm text-gray-600">{user.shopName || '-'}</td>
+                  <td className="px-6 py-3 text-sm text-gray-600">
+                    {user.lastActivity
+                      ? new Date(user.lastActivity).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' })
+                      : <span className="text-gray-400">ไม่มีบันทึก</span>}
+                  </td>
+                  <td className="px-6 py-3">
+                    {user.daysInactive != null ? (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        user.daysInactive > 14 ? 'bg-red-100 text-red-700' :
+                        user.daysInactive > 7 ? 'bg-orange-100 text-orange-700' :
+                        user.daysInactive > 3 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {user.daysInactive} วัน
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">ไม่มีบันทึก</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-right">
+                    <Link href={`/admin/logs?user=${encodeURIComponent(user.name || '')}`} className="text-xs text-blue-600 hover:text-blue-800">
+                      ดู Log
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {data.leastActiveUsers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-400">
+                    ไม่มีข้อมูลผู้ใช้
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
