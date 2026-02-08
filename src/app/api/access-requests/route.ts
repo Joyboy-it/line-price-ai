@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, logAction } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { AccessRequest } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -68,6 +69,9 @@ export async function POST(request: NextRequest) {
         [shop_name, session.user.id]
       );
     }
+
+    revalidatePath('/admin');
+    revalidatePath('/admin/requests');
 
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error) {

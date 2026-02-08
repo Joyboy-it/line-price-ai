@@ -1,9 +1,14 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import { th } from 'date-fns/locale';
 
-export function formatDate(date: Date | string, formatStr: string = 'dd/MM/yyyy'): string {
+function toBangkokTime(date: Date | string): Date {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return format(d, formatStr, { locale: th });
+  const bangkokStr = d.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  return new Date(bangkokStr);
+}
+
+export function formatDate(date: Date | string, formatStr: string = 'dd/MM/yyyy'): string {
+  return format(toBangkokTime(date), formatStr, { locale: th });
 }
 
 export function formatDateTime(date: Date | string): string {

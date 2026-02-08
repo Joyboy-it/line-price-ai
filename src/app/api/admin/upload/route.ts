@@ -85,13 +85,15 @@ export async function POST(request: NextRequest) {
           const dateStr = now.toLocaleDateString('th-TH', {
             day: '2-digit',
             month: '2-digit',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Asia/Bangkok',
           });
           const timeStr = now.toLocaleTimeString('th-TH', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: 'Asia/Bangkok',
           });
           
           const headerMessage = `📢 อัพเดทราคาวันที่ ${dateStr} ${timeStr}\n\n📸 ${priceGroup.name}`;
