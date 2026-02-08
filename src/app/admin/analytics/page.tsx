@@ -470,7 +470,7 @@ export default function AnalyticsPage() {
           </div>
           <span className="text-xs text-gray-500">เข้าใช้น้อยสุดอยู่ด้านบน</span>
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-135 overflow-y-auto">
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0">
               <tr className="text-xs text-gray-500 uppercase">
