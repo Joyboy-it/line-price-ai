@@ -119,18 +119,27 @@ export async function GET() {
       ),
     ]);
 
-    // ── Inactive Users (30+ days) ──
+    // ── Inactive Users (30+ days) — ใช้ user_logs เป็นหลัก ──
     const inactiveUsersList = await query<{
       id: string; name: string; email: string; shop_name: string;
-      last_login: string | null; days_inactive: string;
+      last_activity: string | null; days_inactive: string;
     }>(
       `SELECT u.id, u.name, u.email, u.shop_name,
-        u.last_login_at as last_login,
-        COALESCE(EXTRACT(DAY FROM NOW() - u.last_login_at)::INT, 999) as days_inactive
+        last_log.last_activity,
+        CASE
+          WHEN last_log.last_activity IS NOT NULL
+            THEN EXTRACT(DAY FROM NOW() - last_log.last_activity)::INT
+          ELSE NULL
+        END as days_inactive
        FROM users u
+       LEFT JOIN (
+         SELECT user_id, MAX(created_at) as last_activity
+         FROM user_logs
+         GROUP BY user_id
+       ) last_log ON last_log.user_id = u.id
        WHERE u.is_active = true
-         AND (u.last_login_at IS NULL OR u.last_login_at < NOW() - INTERVAL '30 days')
-       ORDER BY u.last_login_at ASC NULLS FIRST
+         AND (last_log.last_activity IS NULL OR last_log.last_activity < NOW() - INTERVAL '30 days')
+       ORDER BY last_log.last_activity ASC NULLS LAST
        LIMIT 20`
     );
 
@@ -197,8 +206,8 @@ export async function GET() {
         name: u.name,
         email: u.email,
         shopName: u.shop_name,
-        lastLogin: u.last_login,
-        daysInactive: parseInt(u.days_inactive?.toString() || '0'),
+        lastActivity: u.last_activity,
+        daysInactive: u.days_inactive ? parseInt(u.days_inactive) : null,
       })),
     };
 

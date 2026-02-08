@@ -69,8 +69,8 @@ interface AnalyticsData {
     name: string;
     email: string;
     shopName: string;
-    lastLogin: string | null;
-    daysInactive: number;
+    lastActivity: string | null;
+    daysInactive: number | null;
   }[];
 }
 
@@ -479,7 +479,7 @@ export default function AnalyticsPage() {
                 <tr className="text-xs text-gray-500 uppercase">
                   <th className="px-6 py-3 text-left">ชื่อผู้ใช้</th>
                   <th className="px-6 py-3 text-left">ร้าน</th>
-                  <th className="px-6 py-3 text-left">เข้าใช้ล่าสุด</th>
+                  <th className="px-6 py-3 text-left">กิจกรรมล่าสุด</th>
                   <th className="px-6 py-3 text-left">ไม่ได้ใช้งาน</th>
                   <th className="px-6 py-3 text-right"></th>
                 </tr>
@@ -493,22 +493,26 @@ export default function AnalyticsPage() {
                     </td>
                     <td className="px-6 py-3 text-sm text-gray-600">{user.shopName || '-'}</td>
                     <td className="px-6 py-3 text-sm text-gray-600">
-                      {user.lastLogin
-                        ? new Date(user.lastLogin).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' })
-                        : 'ไม่เคย'}
+                      {user.lastActivity
+                        ? new Date(user.lastActivity).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : <span className="text-gray-400">ไม่มีบันทึก</span>}
                     </td>
                     <td className="px-6 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        user.daysInactive > 90 ? 'bg-red-100 text-red-700' :
-                        user.daysInactive > 60 ? 'bg-orange-100 text-orange-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {user.daysInactive > 0 ? `${user.daysInactive} วัน` : 'ไม่เคย'}
-                      </span>
+                      {user.daysInactive != null ? (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          user.daysInactive > 90 ? 'bg-red-100 text-red-700' :
+                          user.daysInactive > 60 ? 'bg-orange-100 text-orange-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {user.daysInactive} วัน
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">ไม่มีบันทึก</span>
+                      )}
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <Link href={`/admin/users/${user.id}`} className="text-xs text-blue-600 hover:text-blue-800">
-                        ดู
+                      <Link href={`/admin/logs?user=${encodeURIComponent(user.name || '')}`} className="text-xs text-blue-600 hover:text-blue-800">
+                        ดู Log
                       </Link>
                     </td>
                   </tr>
