@@ -199,17 +199,19 @@ export default function AnalyticsPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/admin"
-              className="text-gray-600 hover:text-gray-900"
-            >
-              ← กลับ
-            </Link>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          </div>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/admin"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-green-600"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                กลับ Dashboard
+              </Link>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+            </div>
           <button
             onClick={() => fetchAnalytics(true)}
             disabled={refreshing}
@@ -217,6 +219,7 @@ export default function AnalyticsPage() {
           >
             {refreshing ? 'กำลังรีเฟรช...' : 'รีเฟรช'}
           </button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <p className="text-gray-600">สถิติและรายงานการใช้งานระบบ</p>
