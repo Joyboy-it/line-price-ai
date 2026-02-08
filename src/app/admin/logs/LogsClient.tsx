@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { User as UserIcon } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
@@ -25,7 +26,8 @@ interface LogsClientProps {
 }
 
 export default function LogsClient({ logs, actionLabels }: LogsClientProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('user') || '');
   const [actionFilter, setActionFilter] = useState('');
 
   const filteredLogs = useMemo(() => {
