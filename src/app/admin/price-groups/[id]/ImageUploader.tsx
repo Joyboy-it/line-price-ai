@@ -6,12 +6,14 @@ import { Upload, Loader2, X, Send } from 'lucide-react';
 interface ImageUploaderProps {
   groupId: string;
   telegramChatId: string | null;
+  lineGroupId: string | null;
 }
 
-export default function ImageUploader({ groupId, telegramChatId }: ImageUploaderProps) {
+export default function ImageUploader({ groupId, telegramChatId, lineGroupId }: ImageUploaderProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [sendToTelegram, setSendToTelegram] = useState(!!telegramChatId);
+  const [sendToLine, setSendToLine] = useState(!!lineGroupId);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -133,6 +135,7 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
         formData.append('file', files[i]);
         formData.append('price_group_id', groupId);
         formData.append('send_to_telegram', sendToTelegram.toString());
+        formData.append('send_to_line', sendToLine.toString());
         formData.append('is_first_image', (i === 0).toString());
 
         const response = await fetch('/api/admin/upload', {
@@ -241,19 +244,33 @@ export default function ImageUploader({ groupId, telegramChatId }: ImageUploader
         </div>
       )}
 
-      {/* Telegram Option */}
-      {telegramChatId && (
-        <div className="mt-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={sendToTelegram}
-              onChange={(e) => setSendToTelegram(e.target.checked)}
-              className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-            />
-            <Send className="w-4 h-4 text-blue-500" />
-            <span className="text-sm text-gray-700">ส่งไปยัง Telegram</span>
-          </label>
+      {/* Send Options */}
+      {(telegramChatId || lineGroupId) && (
+        <div className="mt-4 space-y-2">
+          {telegramChatId && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendToTelegram}
+                onChange={(e) => setSendToTelegram(e.target.checked)}
+                className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
+              />
+              <Send className="w-4 h-4 text-blue-500" />
+              <span className="text-sm text-gray-700">ส่งไปยัง Telegram</span>
+            </label>
+          )}
+          {lineGroupId && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendToLine}
+                onChange={(e) => setSendToLine(e.target.checked)}
+                className="w-4 h-4 text-green-500 rounded focus:ring-green-500"
+              />
+              <Send className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-gray-700">ส่งไปยัง LINE</span>
+            </label>
+          )}
         </div>
       )}
 

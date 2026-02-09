@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const priceGroupId = formData.get('price_group_id') as string;
     const sendToTelegram = formData.get('send_to_telegram') === 'true';
+    const sendToLine = formData.get('send_to_line') === 'true';
     const isFirstImage = formData.get('is_first_image') === 'true';
 
     if (!file) {
@@ -63,8 +64,8 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    // ส่งข้อความไป LINE Group (เฉพาะรูปแรก)
-    if (isFirstImage && priceGroup.line_group_id) {
+    // ส่งข้อความไป LINE Group (เฉพาะรูปแรก + ต้องเปิด toggle)
+    if (sendToLine && isFirstImage && priceGroup.line_group_id) {
       try {
         const lineMessage = createPriceUpdateMessage(priceGroup.name);
         const lineResult = await sendLineMessage(priceGroup.line_group_id, lineMessage);

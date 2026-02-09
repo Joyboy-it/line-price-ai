@@ -72,7 +72,7 @@ export default async function AdminPriceGroupPage({ params }: PageProps) {
       </div>
 
       {/* Upload Section */}
-      <ImageUploader groupId={id} telegramChatId={priceGroup.telegram_chat_id} />
+      <ImageUploader groupId={id} telegramChatId={priceGroup.telegram_chat_id} lineGroupId={priceGroup.line_group_id} />
 
       {/* Images List */}
       <div className="mt-8">
