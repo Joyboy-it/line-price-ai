@@ -11,7 +11,7 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "วงษ์พาณิชย์ ส.เจริญชัย รีไซเคิล - ระบบเช็คราคา",
+  title: "ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์ - ระบบเช็คราคา",
   description: "ระบบเว็บแอปพลิเคชันสำหรับจัดการและแชร์ราคาสินค้าผ่าน LINE Login",
 };
 

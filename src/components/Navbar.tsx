@@ -63,13 +63,13 @@ export default function Navbar() {
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/logo.png"
-                alt="วงษ์พาณิชย์ ส.เจริญชัย รีไซเคิล"
+                alt="ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์ "
                 width={40}
                 height={40}
                 className="rounded-full"
               />
               <span className="font-semibold text-gray-800 hidden sm:block">
-                วงษ์พาณิชย์ ส.เจริญชัย รีไซเคิล
+                ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์ 
               </span>
             </Link>
           </div>
