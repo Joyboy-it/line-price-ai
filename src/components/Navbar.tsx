@@ -62,7 +62,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
               <Image
-                src="/logo-v2.png"
+                src="/logo-v3.png"
                 alt="ส.เจริญชัย รีไซเคิล "
                 width={40}
                 height={40}
