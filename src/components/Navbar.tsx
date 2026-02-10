@@ -68,6 +68,9 @@ export default function Navbar() {
                 height={40}
                 className="rounded-full"
               />
+              <span className="font-semibold text-gray-800 text-sm sm:hidden">
+                ส.เจริญชัย
+              </span>
               <span className="font-semibold text-gray-800 hidden sm:block">
                 ส.เจริญชัย รีไซเคิล 
               </span>
