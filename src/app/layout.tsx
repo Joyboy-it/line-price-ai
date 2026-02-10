@@ -13,6 +13,10 @@ const notoSansThai = Noto_Sans_Thai({
 export const metadata: Metadata = {
   title: "ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์ - ระบบเช็คราคา",
   description: "ระบบเว็บแอปพลิเคชันสำหรับจัดการและแชร์ราคาสินค้าผ่าน LINE Login",
+  icons: {
+    icon: "/logo-v3.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
