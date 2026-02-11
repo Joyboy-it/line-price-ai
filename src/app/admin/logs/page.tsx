@@ -13,15 +13,39 @@ interface LogWithUser extends UserLog {
   user_image: string | null;
 }
 
-async function getLogs(limit: number = 100): Promise<LogWithUser[]> {
-  return query<LogWithUser>(
-    `SELECT ul.*, u.name as user_name, u.image as user_image
-     FROM user_logs ul
-     LEFT JOIN users u ON u.id = ul.user_id
-     ORDER BY ul.created_at DESC
-     LIMIT $1`,
-    [limit]
-  );
+const PAGE_SIZE = 100;
+
+async function getLogs(page: number = 1, action?: string): Promise<{ logs: LogWithUser[]; totalCount: number }> {
+  const offset = (page - 1) * PAGE_SIZE;
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+  let paramIndex = 1;
+
+  if (action) {
+    conditions.push(`ul.action = $${paramIndex}`);
+    params.push(action);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const [logs, countResult] = await Promise.all([
+    query<LogWithUser>(
+      `SELECT ul.*, u.name as user_name, u.image as user_image
+       FROM user_logs ul
+       LEFT JOIN users u ON u.id = ul.user_id
+       ${whereClause}
+       ORDER BY ul.created_at DESC
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, PAGE_SIZE, offset]
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM user_logs ul ${whereClause}`,
+      params
+    ),
+  ]);
+
+  return { logs, totalCount: parseInt(countResult[0]?.count || '0', 10) };
 }
 
 const actionLabels: Record<string, { label: string; color: string }> = {
@@ -45,14 +69,22 @@ const actionLabels: Record<string, { label: string; color: string }> = {
   delete_user: { label: 'ลบผู้ใช้', color: 'bg-red-100 text-red-700' },
 };
 
-export default async function LogsPage() {
+export default async function LogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; action?: string }>;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'operator')) {
     redirect('/');
   }
 
-  const logs = await getLogs();
+  const params = await searchParams;
+  const currentPage = Math.max(1, parseInt(params.page || '1', 10));
+  const currentAction = params.action || '';
+  const { logs, totalCount } = await getLogs(currentPage, currentAction || undefined);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -77,7 +109,14 @@ export default async function LogsPage() {
         <RefreshButton />
       </div>
 
-      <LogsClient logs={logs} actionLabels={actionLabels} />
+      <LogsClient
+        logs={logs}
+        actionLabels={actionLabels}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        currentAction={currentAction}
+      />
     </div>
   );
 }
