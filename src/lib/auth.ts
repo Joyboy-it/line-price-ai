@@ -97,13 +97,15 @@ export const authOptions: NextAuthOptions = {
         // ทุกครั้งที่มี token อยู่แล้ว - ดึง role ล่าสุดจาก database
         else if (token.id) {
           const dbUser = await queryOne<User>(
-            'SELECT role, shop_name, is_active FROM users WHERE id = $1',
+            'SELECT role, shop_name, is_active, name, image FROM users WHERE id = $1',
             [token.id]
           );
           if (dbUser) {
             token.role = dbUser.role;
             token.shop_name = dbUser.shop_name;
             token.is_active = dbUser.is_active;
+            token.name = dbUser.name;
+            token.picture = dbUser.image;
           }
         }
         
@@ -123,6 +125,9 @@ export const authOptions: NextAuthOptions = {
         session.user.provider_id = token.provider_id as string;
         session.user.shop_name = token.shop_name as string | undefined;
         session.user.is_active = token.is_active as boolean;
+        // อัพเดทชื่อและรูปจาก DB ล่าสุด
+        if (token.name) session.user.name = token.name as string;
+        if (token.picture) session.user.image = token.picture as string;
       }
       console.log('Session callback - Final session:', session);
       return session;
