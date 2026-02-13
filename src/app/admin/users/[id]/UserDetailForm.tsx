@@ -56,6 +56,7 @@ export default function UserDetailForm({ user }: UserDetailFormProps) {
       
       setTimeout(() => {
         router.push('/admin/users');
+        router.refresh();
       }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');

@@ -71,6 +71,7 @@ export default function GroupForm({ group, branches }: GroupFormProps) {
       
       setTimeout(() => {
         router.push('/admin/manage-groups');
+        router.refresh();
       }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');

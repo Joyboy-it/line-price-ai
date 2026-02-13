@@ -33,6 +33,7 @@ export default function CreateBranchForm() {
       }
 
       router.push('/admin/branches');
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsSubmitting(false);

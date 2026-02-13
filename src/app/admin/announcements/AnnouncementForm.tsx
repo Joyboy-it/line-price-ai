@@ -108,6 +108,7 @@ export default function AnnouncementForm({ announcement }: AnnouncementFormProps
       
       setTimeout(() => {
         router.push('/admin/announcements');
+        router.refresh();
       }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
