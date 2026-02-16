@@ -3,6 +3,22 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'profile.line-scdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'sprofile.line-scdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'obs.line-scdn.net',
+      },
+    ],
+  },
   async headers() {
     return [
       {

@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Users,
   Tag,
@@ -165,9 +166,19 @@ export default async function AdminDashboardPage() {
               {pendingRequests.map((request) => (
                 <div key={request.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-yellow-600" />
-                    </div>
+                    {typeof request.user === 'object' && request.user.image ? (
+                      <Image
+                        src={request.user.image}
+                        alt={request.user.name || ''}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-yellow-600" />
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium text-gray-800">
                         {typeof request.user === 'object' ? request.user.name : 'Unknown'}
