@@ -6,7 +6,7 @@ import { ArrowLeft, Users } from 'lucide-react';
 import { User, PriceGroup } from '@/types';
 import UserList from './UserList';
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 100;
 
 interface UserWithGroups extends User {
   groups: PriceGroup[];
