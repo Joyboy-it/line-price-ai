@@ -142,7 +142,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       <div>
         <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-1">
-          ชื่อร้าน <span className="text-red-500">*</span>
+          ชื่อร้านของท่าน <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -151,7 +151,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
           onChange={(e) => setShopName(e.target.value)}
           required
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          placeholder="กรอกชื่อร้านของคุณ"
+          placeholder="กรอกชื่อร้านของท่าน"
         />
       </div>
 
@@ -163,11 +163,21 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
           type="tel"
           id="phone"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+            let formatted = digits;
+            if (digits.length > 6) formatted = digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+            else if (digits.length > 3) formatted = digits.slice(0, 3) + '-' + digits.slice(3);
+            setPhone(formatted);
+          }}
           required
+          maxLength={12}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          placeholder="กรอกเบอร์โทรศัพท์"
+          placeholder="0XX-XXX-XXXX"
         />
+        {phone && phone.replace(/\D/g, '').length < 10 && (
+          <p className="text-xs text-red-500 mt-1">กรุณากรอกเบอร์โทร 10 หลัก</p>
+        )}
       </div>
 
       <div>
@@ -192,7 +202,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       <button
         type="submit"
-        disabled={isSubmitting || !shopName || !phone}
+        disabled={isSubmitting || !shopName || phone.replace(/\D/g, '').length < 10}
         className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
       >
         {isSubmitting ? (
