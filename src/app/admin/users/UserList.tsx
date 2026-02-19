@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, Filter, FileText, MapPin, Tag, Link2, Shield, Power, X, User as UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, FileText, MapPin, Tag, Shield, Power, X, User as UserIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { User, PriceGroup, UserRole } from '@/types';
 import { hasPermission } from '@/lib/permissions';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -18,13 +19,22 @@ interface UserListProps {
   priceGroups: PriceGroup[];
   branches: { id: string; name: string; code: string }[];
   currentUserRole: UserRole;
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  currentSearch: string;
+  currentBranch: string;
+  currentRole: string;
+  currentStatus: string;
 }
 
-export default function UserList({ users, priceGroups, branches, currentUserRole }: UserListProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [branchFilter, setBranchFilter] = useState<string>('ทั้งหมด');
-  const [roleFilter, setRoleFilter] = useState<string>('ทั้งหมด');
-  const [statusFilter, setStatusFilter] = useState<string>('ทั้งหมด');
+export default function UserList({ 
+  users, priceGroups, branches, currentUserRole,
+  totalCount, currentPage, totalPages,
+  currentSearch, currentBranch, currentRole, currentStatus
+}: UserListProps) {
+  const router = useRouter();
+  const [searchInput, setSearchInput] = useState(currentSearch);
   const [selectedUser, setSelectedUser] = useState<UserWithGroups | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -35,25 +45,37 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
     message: string;
     onConfirm: () => Promise<void>;
   }>({ isOpen: false, title: '', message: '', onConfirm: async () => {} });
-  
-  // ใช้ role จาก server-side แทน useSession เพื่อแก้ปัญหา session loading
+
   const canManageRoles = hasPermission(currentUserRole, 'manage_roles');
   const canToggleUserStatus = hasPermission(currentUserRole, 'toggle_user_status');
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.shop_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesBranch = branchFilter === 'ทั้งหมด' || user.branches.includes(branchFilter);
-    const matchesRole = roleFilter === 'ทั้งหมด' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'ทั้งหมด' || 
-      (statusFilter === 'active' && user.is_active) ||
-      (statusFilter === 'inactive' && !user.is_active);
-    
-    return matchesSearch && matchesBranch && matchesRole && matchesStatus;
-  });
+  const buildUrl = useCallback((overrides: Record<string, string>) => {
+    const params = new URLSearchParams();
+    const merged = {
+      page: String(currentPage),
+      search: currentSearch,
+      branch: currentBranch,
+      role: currentRole,
+      status: currentStatus,
+      ...overrides,
+    };
+    Object.entries(merged).forEach(([k, v]) => {
+      if (k === 'page') { if (v !== '1') params.set(k, v); }
+      else if (v && v !== 'ทั้งหมด') params.set(k, v);
+    });
+    return `/admin/users?${params.toString()}`;
+  }, [currentPage, currentSearch, currentBranch, currentRole, currentStatus]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.push(buildUrl({ search: searchInput, page: '1' }));
+  };
+
+  const handleFilter = (key: string, value: string) => {
+    router.push(buildUrl({ [key]: value, page: '1' }));
+  };
+
+  const filteredUsers = users;
 
   const handleToggleUserStatus = async (userId: string, userName: string, currentStatus: boolean) => {
     const action = currentStatus ? 'ปิดการใช้งาน' : 'เปิดการใช้งาน';
@@ -148,24 +170,27 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
 
   return (
     <div>
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {/* Search + Filters */}
+      <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="ค้นหาผู้ใช้ (ชื่อ, อีเมล)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="ค้นหาชื่อ, ชื่อร้าน, เบอร์โทร..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
+        <button type="submit" className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium">
+          ค้นหา
+        </button>
         <select
-          value={branchFilter}
-          onChange={(e) => setBranchFilter(e.target.value)}
+          value={currentBranch}
+          onChange={(e) => handleFilter('branch', e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
         >
-          <option>ทั้งหมด</option>
+          <option value="ทั้งหมด">ทุกสาขา</option>
           {branches.map((branch) => (
             <option key={branch.id} value={branch.name}>
               {branch.name}
@@ -173,31 +198,52 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
           ))}
         </select>
         <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          value={currentRole}
+          onChange={(e) => handleFilter('role', e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
         >
-          <option>ทั้งหมด</option>
+          <option value="ทั้งหมด">ทุกบทบาท</option>
           <option value="user">User</option>
           <option value="worker">Worker</option>
           <option value="operator">Operator</option>
           <option value="admin">Admin</option>
         </select>
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={currentStatus}
+          onChange={(e) => handleFilter('status', e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
         >
-          <option>ทั้งหมด</option>
+          <option value="ทั้งหมด">ทุกสถานะ</option>
           <option value="active">ใช้งาน</option>
           <option value="inactive">ไม่ใช้งาน</option>
         </select>
-      </div>
+      </form>
 
-      {/* User Count */}
-      <p className="text-sm text-gray-500 mb-4">
-        แสดง {filteredUsers.length} จาก {users.length} รายการ
-      </p>
+      {/* Summary + Pagination top */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-500">
+          แสดง {filteredUsers.length} รายการ (ทั้งหมด {totalCount} รายการ) หน้า {currentPage}/{totalPages}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(buildUrl({ page: String(currentPage - 1) }))}
+              disabled={currentPage <= 1}
+              className="p-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+            <button
+              onClick={() => router.push(buildUrl({ page: String(currentPage + 1) }))}
+              disabled={currentPage >= totalPages}
+              className="p-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* User List */}
       <div className="space-y-4">
@@ -355,6 +401,43 @@ export default function UserList({ users, priceGroups, branches, currentUserRole
           </div>
         ))}
       </div>
+
+      {/* Pagination bottom */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => router.push(buildUrl({ page: '1' }))}
+            disabled={currentPage <= 1}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-40 hover:bg-gray-50"
+          >
+            หน้าแรก
+          </button>
+          <button
+            onClick={() => router.push(buildUrl({ page: String(currentPage - 1) }))}
+            disabled={currentPage <= 1}
+            className="p-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="px-4 py-2 text-sm text-gray-700 font-medium">
+            หน้า {currentPage} จาก {totalPages}
+          </span>
+          <button
+            onClick={() => router.push(buildUrl({ page: String(currentPage + 1) }))}
+            disabled={currentPage >= totalPages}
+            className="p-2 rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => router.push(buildUrl({ page: String(totalPages) }))}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm disabled:opacity-40 hover:bg-gray-50"
+          >
+            หน้าสุดท้าย
+          </button>
+        </div>
+      )}
 
       {/* Modals */}
       {showGroupModal && selectedUser && (

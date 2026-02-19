@@ -2,24 +2,80 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, Users, Search, Filter, FileText, Tag, Edit, Trash2, Shield } from 'lucide-react';
+import { ArrowLeft, Users } from 'lucide-react';
 import { User, PriceGroup } from '@/types';
 import UserList from './UserList';
+
+const PAGE_SIZE = 200;
 
 interface UserWithGroups extends User {
   groups: PriceGroup[];
   branches: string[];
 }
 
-async function getUsers(): Promise<UserWithGroups[]> {
-  // แสดงเฉพาะผู้ใช้ที่ผ่านการอนุมัติแล้ว (มี access_request ที่ approved)
-  const users = await query<User>(
+interface GetUsersOptions {
+  page: number;
+  search: string;
+  branch: string;
+  role: string;
+  status: string;
+}
+
+async function getUsers(opts: GetUsersOptions): Promise<{ users: UserWithGroups[]; totalCount: number }> {
+  const { page, search, branch, role, status } = opts;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const conditions: string[] = ['ar.status = \'approved\''];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  if (search) {
+    conditions.push(`(u.name ILIKE $${idx} OR u.shop_name ILIKE $${idx} OR u.phone ILIKE $${idx})`);
+    params.push(`%${search}%`);
+    idx++;
+  }
+  if (role && role !== 'ทั้งหมด') {
+    conditions.push(`u.role = $${idx}`);
+    params.push(role);
+    idx++;
+  }
+  if (status && status !== 'ทั้งหมด') {
+    conditions.push(`u.is_active = $${idx}`);
+    params.push(status === 'active');
+    idx++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countResult = await query<{ count: string }>(
+    `SELECT COUNT(DISTINCT u.id) as count FROM users u
+     INNER JOIN access_requests ar ON ar.user_id = u.id
+     ${whereClause}`,
+    params
+  );
+  const totalCount = parseInt(countResult[0]?.count || '0');
+
+  let users = await query<User>(
     `SELECT DISTINCT u.* FROM users u
      INNER JOIN access_requests ar ON ar.user_id = u.id
-     WHERE ar.status = 'approved'
-     ORDER BY u.created_at DESC`
+     ${whereClause}
+     ORDER BY u.created_at DESC
+     LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+    params
   );
+
+  if (branch && branch !== 'ทั้งหมด') {
+    const branchFiltered = await Promise.all(
+      users.map(async (user) => {
+        const bs = await query<{ name: string }>(
+          `SELECT b.name FROM branches b INNER JOIN user_branches ub ON ub.branch_id = b.id WHERE ub.user_id = $1`,
+          [user.id]
+        );
+        return bs.some((b) => b.name === branch) ? user : null;
+      })
+    );
+    users = branchFiltered.filter(Boolean) as User[];
+  }
 
   const usersWithGroups = await Promise.all(
     users.map(async (user) => {
@@ -35,15 +91,11 @@ async function getUsers(): Promise<UserWithGroups[]> {
          WHERE ub.user_id = $1`,
         [user.id]
       );
-      return {
-        ...user,
-        groups,
-        branches: branches.map((b) => b.name),
-      };
+      return { ...user, groups, branches: branches.map((b) => b.name) };
     })
   );
 
-  return usersWithGroups;
+  return { users: usersWithGroups, totalCount };
 }
 
 async function getAllPriceGroups(): Promise<PriceGroup[]> {
@@ -58,14 +110,27 @@ async function getAllBranches() {
   );
 }
 
-export default async function AdminUsersPage() {
-  const session = await getServerSession(authOptions);
+interface PageProps {
+  searchParams: Promise<{ page?: string; search?: string; branch?: string; role?: string; status?: string }>;
+}
 
-  const [users, priceGroups, branches] = await Promise.all([
-    getUsers(),
+export default async function AdminUsersPage({ searchParams }: PageProps) {
+  const session = await getServerSession(authOptions);
+  const sp = await searchParams;
+
+  const page = Math.max(1, parseInt(sp.page || '1'));
+  const search = sp.search || '';
+  const branch = sp.branch || 'ทั้งหมด';
+  const role = sp.role || 'ทั้งหมด';
+  const status = sp.status || 'ทั้งหมด';
+
+  const [{ users, totalCount }, priceGroups, branches] = await Promise.all([
+    getUsers({ page, search, branch, role, status }),
     getAllPriceGroups(),
     getAllBranches(),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -88,10 +153,17 @@ export default async function AdminUsersPage() {
       </div>
 
       <UserList 
-        users={users} 
+        users={users}
         priceGroups={priceGroups} 
         branches={branches}
         currentUserRole={(session?.user?.role || 'user') as 'admin' | 'operator' | 'worker' | 'user'}
+        totalCount={totalCount}
+        currentPage={page}
+        totalPages={totalPages}
+        currentSearch={search}
+        currentBranch={branch}
+        currentRole={role}
+        currentStatus={status}
       />
     </div>
   );
