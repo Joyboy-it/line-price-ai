@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,6 +35,7 @@ export default function UserList({
 }: UserListProps) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState(currentSearch);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserWithGroups | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -66,9 +67,12 @@ export default function UserList({
     return `/admin/users?${params.toString()}`;
   }, [currentPage, currentSearch, currentBranch, currentRole, currentStatus]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push(buildUrl({ search: searchInput, page: '1' }));
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      router.push(buildUrl({ search: value, page: '1' }));
+    }, 500);
   };
 
   const handleFilter = (key: string, value: string) => {
@@ -171,20 +175,17 @@ export default function UserList({
   return (
     <div>
       {/* Search + Filters */}
-      <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3 mb-4">
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
             placeholder="ค้นหาชื่อ, ชื่อร้าน, เบอร์โทร..."
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
-        <button type="submit" className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium">
-          ค้นหา
-        </button>
         <select
           value={currentBranch}
           onChange={(e) => handleFilter('branch', e.target.value)}
@@ -217,7 +218,7 @@ export default function UserList({
           <option value="active">ใช้งาน</option>
           <option value="inactive">ไม่ใช้งาน</option>
         </select>
-      </form>
+      </div>
 
       {/* Summary + Pagination top */}
       <div className="flex items-center justify-between mb-4">
