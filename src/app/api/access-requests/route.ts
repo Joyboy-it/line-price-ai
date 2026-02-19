@@ -41,10 +41,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { shop_name, note, branch_id } = body;
+    const { shop_name, phone, note, branch_id } = body;
 
     if (!shop_name) {
       return NextResponse.json({ error: 'Shop name is required' }, { status: 400 });
+    }
+
+    if (!phone) {
+      return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
     const existingPending = await queryOne<AccessRequest>(
@@ -63,12 +67,10 @@ export async function POST(request: NextRequest) {
       [session.user.id, shop_name, note || null, branch_id || null]
     );
 
-    if (shop_name && !session.user.shop_name) {
-      await query(
-        `UPDATE users SET shop_name = $1 WHERE id = $2`,
-        [shop_name, session.user.id]
-      );
-    }
+    await query(
+      `UPDATE users SET shop_name = COALESCE($1, shop_name), phone = $2 WHERE id = $3`,
+      [shop_name || null, phone, session.user.id]
+    );
 
     revalidatePath('/admin');
     revalidatePath('/admin/requests');

@@ -19,6 +19,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [shopName, setShopName] = useState('');
+  const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -57,7 +58,8 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           branch_id: selectedBranch,
-          shop_name: shopName, 
+          shop_name: shopName,
+          phone,
           note 
         }),
       });
@@ -69,6 +71,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       setSuccess(true);
       setShopName('');
+      setPhone('');
       setNote('');
       onSuccess?.();
     } catch (err) {
@@ -153,6 +156,21 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
       </div>
 
       <div>
+        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+          เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="tel"
+          id="phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          placeholder="กรอกเบอร์โทรศัพท์"
+        />
+      </div>
+
+      <div>
         <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-1">
           หมายเหตุ
         </label>
@@ -174,7 +192,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       <button
         type="submit"
-        disabled={isSubmitting || !shopName}
+        disabled={isSubmitting || !shopName || !phone}
         className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
       >
         {isSubmitting ? (
