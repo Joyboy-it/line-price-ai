@@ -119,6 +119,20 @@ export async function GET() {
       ),
     ]);
 
+    // ── ผู้ใช้ที่อนุมัติแล้วแยกตามสาขา ──
+    const usersByBranch = await query<{ branch_name: string; role: string; count: string }>(
+      `SELECT 
+        COALESCE(b.name, 'ไม่ระบุสาขา') as branch_name,
+        u.role,
+        COUNT(DISTINCT u.id) as count
+       FROM users u
+       INNER JOIN access_requests ar ON ar.user_id = u.id AND ar.status = 'approved'
+       LEFT JOIN user_branches ub ON ub.user_id = u.id
+       LEFT JOIN branches b ON b.id = ub.branch_id
+       GROUP BY b.name, u.role
+       ORDER BY b.name ASC NULLS LAST, u.role ASC`
+    );
+
     // ── ผู้ใช้เรียงตามกิจกรรมล่าสุด (น้อยสุดก่อน) ──
     const leastActiveUsers = await query<{
       id: string; name: string; email: string; shop_name: string;
@@ -200,6 +214,7 @@ export async function GET() {
           activityCount: parseInt(u.activity_count),
         })),
       },
+      usersByBranch: usersByBranch,
       leastActiveUsers: leastActiveUsers.map(u => ({
         id: u.id,
         name: u.name,

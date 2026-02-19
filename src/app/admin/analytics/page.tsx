@@ -64,6 +64,7 @@ interface AnalyticsData {
     uploadCount: number;
     topUsers: { userId: string; userName: string; activityCount: number }[];
   };
+  usersByBranch: { branch_name: string; role: string; count: string }[];
   leastActiveUsers: {
     id: string;
     name: string;
@@ -381,6 +382,66 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── ผู้ใช้ที่อนุมัติแล้วแยกตามสาขา ── */}
+      {data.usersByBranch.length > 0 && (() => {
+        const roles = ['admin', 'operator', 'worker', 'user'];
+        const roleLabels: Record<string, string> = { admin: 'Admin', operator: 'Operator', worker: 'Worker', user: 'User' };
+        const branches = [...new Set(data.usersByBranch.map(r => r.branch_name))];
+        const getCount = (branch: string, role: string) => {
+          const row = data.usersByBranch.find(r => r.branch_name === branch && r.role === role);
+          return row ? parseInt(row.count) : 0;
+        };
+        const branchTotal = (branch: string) => roles.reduce((s, r) => s + getCount(branch, r), 0);
+        const roleTotal = (role: string) => branches.reduce((s, b) => s + getCount(b, role), 0);
+        const grandTotal = branches.reduce((s, b) => s + branchTotal(b), 0);
+        return (
+          <div className="bg-white rounded-lg border border-gray-200 mb-8">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-500" />
+              <h2 className="font-semibold text-gray-800">ผู้ใช้ที่ผ่านการอนุมัติแยกตามสาขา</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left">สาขา</th>
+                    {roles.map(r => (
+                      <th key={r} className="px-4 py-3 text-center">{roleLabels[r]}</th>
+                    ))}
+                    <th className="px-4 py-3 text-center font-bold text-gray-700">รวม</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {branches.map(branch => (
+                    <tr key={branch} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 font-medium text-gray-800">{branch}</td>
+                      {roles.map(r => {
+                        const c = getCount(branch, r);
+                        return (
+                          <td key={r} className="px-4 py-3 text-center">
+                            {c > 0 ? <span className="font-medium text-gray-900">{c}</span> : <span className="text-gray-300">-</span>}
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-3 text-center font-bold text-blue-700">{branchTotal(branch)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200">
+                    <td className="px-6 py-3 font-bold text-gray-700">รวมทุกสาขา</td>
+                    {roles.map(r => (
+                      <td key={r} className="px-4 py-3 text-center font-bold text-gray-700">{roleTotal(r)}</td>
+                    ))}
+                    <td className="px-4 py-3 text-center font-bold text-blue-800 text-base">{grandTotal}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── กลุ่มราคา ── */}
       {data.priceGroups.usage.length > 0 && (
