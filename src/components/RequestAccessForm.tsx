@@ -142,7 +142,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       <div>
         <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-1">
-          ชื่อร้าน <span className="text-red-500">*</span>
+          กรอกชื่อร้านของท่าน <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -151,7 +151,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
           onChange={(e) => setShopName(e.target.value)}
           required
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          placeholder="กรอกชื่อร้านของคุณ"
+          placeholder="กรอกชื่อร้านของท่าน"
         />
       </div>
 
@@ -163,11 +163,22 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
           type="tel"
           id="phone"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+            setPhone(digits);
+          }}
           required
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          placeholder="กรอกเบอร์โทรศัพท์"
+          maxLength={10}
+          inputMode="numeric"
+          pattern="[0-9]{10}"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+            phone.length > 0 && phone.length < 10 ? 'border-red-400' : 'border-gray-300'
+          }`}
+          placeholder="0XXXXXXXXX"
         />
+        {phone.length > 0 && phone.length < 10 && (
+          <p className="text-xs text-red-500 mt-1">กรุณากรอกเบอร์โทร 10 หลัก (กรอกแล้ว {phone.length}/10)</p>
+        )}
       </div>
 
       <div>
@@ -192,7 +203,7 @@ export default function RequestAccessForm({ onSuccess }: RequestAccessFormProps)
 
       <button
         type="submit"
-        disabled={isSubmitting || !shopName || !phone}
+        disabled={isSubmitting || !shopName || phone.length < 10}
         className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
       >
         {isSubmitting ? (
