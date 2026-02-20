@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight, ZoomIn, Download } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 interface ImageLightboxProps {
   images: { id: string; url: string; title?: string }[];
@@ -18,6 +18,7 @@ export default function ImageLightbox({
   onClose,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
@@ -38,11 +39,17 @@ export default function ImageLightbox({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     };
   }, [isOpen]);
 
@@ -58,8 +65,26 @@ export default function ImageLightbox({
 
   const currentImage = images[currentIndex];
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext();
+      else handlePrev();
+    }
+    touchStartX.current = null;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Close Button */}
       <button
         onClick={onClose}
@@ -109,14 +134,6 @@ export default function ImageLightbox({
             </p>
           </div>
           <div className="flex gap-2">
-            <a
-              href={currentImage.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white"
-            >
-              <ZoomIn className="w-5 h-5" />
-            </a>
             <a
               href={currentImage.url}
               download
