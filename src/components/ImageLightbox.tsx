@@ -134,13 +134,29 @@ export default function ImageLightbox({
             </p>
           </div>
           <div className="flex gap-2">
-            <a
-              href={currentImage.url}
-              download
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch(currentImage.url);
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = currentImage.title || `image-${currentIndex + 1}.jpg`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error('Download failed:', error);
+                  // Fallback: open in new tab
+                  window.open(currentImage.url, '_blank');
+                }
+              }}
               className="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white"
             >
               <Download className="w-5 h-5" />
-            </a>
+            </button>
           </div>
         </div>
       </div>
