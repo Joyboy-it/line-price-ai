@@ -521,15 +521,15 @@ function GroupModal({ user, priceGroups, onClose }: { user: UserWithGroups; pric
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-800">จัดการกลุ่มราคา</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           <p className="text-sm text-gray-600 mb-4">ผู้ใช้: {user.name}</p>
 
           {/* Search Box */}
@@ -550,7 +550,7 @@ function GroupModal({ user, priceGroups, onClose }: { user: UserWithGroups; pric
             </p>
           ) : (
             <>
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-4 max-h-60 overflow-y-auto pr-1">
                 {filteredGroups.map((group) => (
                   <label key={group.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
                     <input
