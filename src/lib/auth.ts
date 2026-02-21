@@ -7,6 +7,18 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  cookies: {
+    state: {
+      name: `__Secure-next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        path: '/',
+        secure: true,
+        maxAge: 900,
+      },
+    },
+  },
   debug: process.env.NODE_ENV === 'development',
   providers: [
     {
@@ -15,11 +27,11 @@ export const authOptions: NextAuthOptions = {
       type: 'oauth',
       authorization: {
         url: 'https://access.line.me/oauth2/v2.1/authorize',
-        params: { scope: 'profile', state: 'line_oauth_state' }
+        params: { scope: 'profile' }
       },
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
-      checks: ['none'],
+      checks: ['state'],
       profile(profile) {
         return {
           id: profile.userId,
