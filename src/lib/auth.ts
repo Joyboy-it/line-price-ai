@@ -15,11 +15,11 @@ export const authOptions: NextAuthOptions = {
       type: 'oauth',
       authorization: {
         url: 'https://access.line.me/oauth2/v2.1/authorize',
-        params: { scope: 'profile' }
+        params: { scope: 'profile', state: 'line_oauth_state' }
       },
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
-      checks: [],
+      checks: ['none'],
       profile(profile) {
         return {
           id: profile.userId,
