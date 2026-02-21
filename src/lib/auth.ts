@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     state: {
-      name: `__Secure-next-auth.state`,
+      name: 'next-auth.state',
       options: {
         httpOnly: true,
         sameSite: 'none',
@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
   providers: [
     {
       id: 'line',
