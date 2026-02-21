@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
       },
       token: 'https://api.line.me/oauth2/v2.1/token',
       userinfo: 'https://api.line.me/v2/profile',
-      checks: ['state'],
+      checks: [],
       profile(profile) {
         return {
           id: profile.userId,
