@@ -2,6 +2,10 @@ import { NextAuthOptions } from 'next-auth';
 import { query, queryOne } from './db';
 import { User } from '@/types';
 
+console.log("[auth] NEXTAUTH_URL =", process.env.NEXTAUTH_URL);
+console.log("[auth] NEXTAUTH_SECRET exists =", !!process.env.NEXTAUTH_SECRET);
+console.log("[auth] LINE_CLIENT_ID exists =", !!process.env.LINE_CLIENT_ID);
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
