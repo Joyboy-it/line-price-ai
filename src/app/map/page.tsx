@@ -1,9 +1,10 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
-import BranchImage from './BranchImage';
+
+type Region = 'all' | 'central' | 'northeast' | 'north' | 'south';
 
 const branches = [
   {
@@ -12,48 +13,61 @@ const branches = [
     subtitle: 'สุขสวัสดิ์ 78 แยก 24',
     description: 'รับซื้อกระดาษ หนังสือพิมพ์ กล่องกระดาษ และเศษกระดาษทุกประเภท',
     mapUrl: 'https://maps.app.goo.gl/QUxCiMymoSymgs4Y8',
-    image: '/map-images/branch1.png',
+    embedUrl: 'https://www.google.com/maps?q=ส.เจริญชัย+โรงกระดาษ+สุขสวัสดิ์+78+แยก+24&output=embed&z=16',
+    region: 'central' as Region,
   },
   {
     id: 2,
-    name: 'ส.เจริญชัย โกดัง 3',
+    name: 'วงษ์พาณิชย์พระประแดง',
     subtitle: 'สุขสวัสดิ์ 78 แยก 20',
     description: 'รับซื้อเศษเหล็ก อลูมิเนียม ทองแดง และโลหะทุกชนิด',
     mapUrl: 'https://maps.app.goo.gl/dU2eMJqc2yjceXEE6',
-    image: '/map-images/branch2.png',
+    embedUrl: 'https://www.google.com/maps?q=ส.เจริญชัย+โกดัง+3+สุขสวัสดิ์+78+แยก+20&output=embed&z=16',
+    region: 'central' as Region,
   },
   {
     id: 3,
     name: 'SB Steel Corporation',
-    subtitle: 'สาขากรุงเทพฯ',
+    subtitle: 'สาขาพระประแดง',
     description: 'รับซื้อและจำหน่ายเหล็กทุกประเภท เหล็กโครงสร้าง เหล็กแผ่น และเหล็กเส้น',
     mapUrl: 'https://maps.app.goo.gl/8DWrUcdDk2rzY2QW7',
-    image: '/map-images/branch3.png',
+    embedUrl: 'https://www.google.com/maps?q=SB+Steel+Corporation+Bangkok&output=embed&z=16',
+    region: 'central' as Region,
   },
   {
     id: 4,
-    name: 'ส.เจริญ โคราช',
+    name: 'วงษ์พาณิชย์โคราชสีดา',
     subtitle: 'สาขานครราชสีมา',
     description: 'รับซื้อของเก่าทุกประเภท เศษโลหะ กระดาษ พลาสติก และอุปกรณ์เก่า',
     mapUrl: 'https://maps.app.goo.gl/Cs5j1baeXHGboyD4A',
-    image: '/map-images/branch4.png',
+    embedUrl: 'https://www.google.com/maps?q=วงษ์พาณิชย์โคราชสีดา+นครราชสีมา&output=embed&z=16',
+    region: 'northeast' as Region,
   },
   {
     id: 5,
-    name: 'วงษ์พาณิชย์ สุราษฎร์ธานี',
+    name: 'วงษ์พาณิชย์สุราษฎร์กาญจนดิษฐ์',
     subtitle: 'สาขากาญจนดิษฐ์',
     description: 'รับซื้อของเก่าทุกประเภทในพื้นที่ภาคใต้ เศษโลหะ กระดาษ และพลาสติก',
     mapUrl: 'https://maps.app.goo.gl/SU37rEp46QmzsnDU9',
-    image: '/map-images/branch5.png',
+    embedUrl: 'https://www.google.com/maps?q=วงษ์พาณิชย์+สุราษฎร์ธานี+กาญจนดิษฐ์&output=embed&z=16',
+    region: 'south' as Region,
   },
 ];
 
-export default async function MapPage() {
-  const session = await getServerSession(authOptions);
+const regionLabels = {
+  all: 'ทั้งหมด',
+  central: 'ภาคกลาง',
+  northeast: 'ภาคตะวันออกเฉียง',
+  north: 'ภาคเหนือ',
+  south: 'ภาคใต้',
+};
 
-  if (!session?.user) {
-    redirect('/api/auth/signin');
-  }
+export default function MapPage() {
+  const [selectedRegion, setSelectedRegion] = useState<Region>('all');
+
+  const filteredBranches = selectedRegion === 'all' 
+    ? branches 
+    : branches.filter(branch => branch.region === selectedRegion);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -73,38 +87,60 @@ export default async function MapPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">สาขารับซื้อของเก่า</h1>
-            <p className="text-sm text-gray-500">{branches.length} สาขาทั่วประเทศ</p>
+            <p className="text-sm text-gray-500">{filteredBranches.length} สาขา{selectedRegion !== 'all' ? ` · ${regionLabels[selectedRegion]}` : 'ทั่วประเทศ'}</p>
           </div>
+        </div>
+
+        {/* Region Filter Buttons */}
+        <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+          {(Object.keys(regionLabels) as Region[]).map((region) => (
+            <button
+              key={region}
+              onClick={() => setSelectedRegion(region)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                selectedRegion === region
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {regionLabels[region]}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Branch Cards */}
-      <div className="space-y-5">
-        {branches.map((branch) => (
+      <div className="space-y-6">
+        {filteredBranches.map((branch) => (
           <div
             key={branch.id}
             className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
           >
-            {/* Branch Image */}
-            <div className="relative w-full h-44 bg-gray-100">
-              <BranchImage src={branch.image} alt={branch.name} />
-              {/* Badge */}
-              <div className="absolute top-3 left-3 z-10">
-                <span className="bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
-                  สาขา {branch.id}
-                </span>
+            {/* Branch Name Header - Above Map */}
+            <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-4 py-4 text-center border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">{branch.name}</h2>
+              <div className="flex items-center justify-center gap-1.5">
+                <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <p className="text-sm text-gray-600">{branch.subtitle}</p>
               </div>
+            </div>
+
+            {/* Google Maps Embed */}
+            <div className="relative w-full h-80 bg-gray-100">
+              <iframe
+                src={branch.embedUrl}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="w-full h-full"
+              />
             </div>
 
             {/* Card Body */}
             <div className="p-4">
-              <h2 className="text-base font-bold text-gray-900 mb-0.5">{branch.name}</h2>
-
-              <div className="flex items-center gap-1.5 mb-3">
-                <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <p className="text-sm text-gray-500">{branch.subtitle}</p>
-              </div>
-
               <p className="text-sm text-gray-600 leading-relaxed mb-4">
                 {branch.description}
               </p>
