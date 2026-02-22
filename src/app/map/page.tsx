@@ -57,7 +57,7 @@ const branches = [
 const regionLabels = {
   all: 'ทั้งหมด',
   central: 'ภาคกลาง',
-  northeast: 'ภาคตะวันออกเฉียง',
+  northeast: 'ภาคตะวันออก',
   north: 'ภาคเหนือ',
   south: 'ภาคใต้',
 };
@@ -92,12 +92,12 @@ export default function MapPage() {
         </div>
 
         {/* Region Filter Buttons */}
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {(Object.keys(regionLabels) as Region[]).map((region) => (
             <button
               key={region}
               onClick={() => setSelectedRegion(region)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 min-w-0 ${
                 selectedRegion === region
                   ? 'bg-slate-800 text-white shadow-sm'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
