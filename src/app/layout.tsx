@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ส.เจริญชัย",
+    title: "ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์",
   },
   icons: {
     icon: "/logo-v3.png",
