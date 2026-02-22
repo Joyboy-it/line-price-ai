@@ -94,6 +94,27 @@ export default async function HomePage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Map Button - Always first for approved users */}
+      {accessStatus.hasAccess && (
+        <section className="mb-8">
+          <Link
+            href="/map"
+            className="flex items-center justify-between p-4 bg-white rounded-lg hover:bg-blue-50 transition cursor-pointer border border-blue-200 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">แผนที่ร้าน</p>
+                <p className="text-sm text-gray-500">ข้อมูลตำแหน่งและแผนที่</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </Link>
+        </section>
+      )}
+
       {/* Announcements Section - Only for approved users */}
       {accessStatus.hasAccess && announcements.length > 0 && (
         <section className="bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl shadow-sm p-6 border border-purple-100 mb-8" style={{ minHeight: '140px' }}>
@@ -147,23 +168,6 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-
-          {/* Map Button */}
-          <Link
-            href="/map"
-            className="mt-4 flex items-center justify-between p-4 bg-white rounded-lg hover:bg-blue-50 transition cursor-pointer border border-blue-200"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">แผนที่ร้าน</p>
-                <p className="text-sm text-gray-500">ข้อมูลตำแหน่งและแผนที่</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
         </section>
       )}
 
