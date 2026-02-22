@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { ArrowLeft, Map } from 'lucide-react';
 
 export default async function DepartmentsPage() {
   const session = await getServerSession(authOptions);
@@ -25,11 +25,11 @@ export default async function DepartmentsPage() {
         
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-blue-600" />
+            <Map className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">แผนกที่ร้าน</h1>
-            <p className="text-sm text-gray-600">ข้อมูลแผนกและหน่วยงานภายในร้าน</p>
+            <h1 className="text-2xl font-bold text-gray-900">แผนที่ร้าน</h1>
+            <p className="text-sm text-gray-600">ข้อมูลตำแหน่งและแผนที่ตั้งของร้าน</p>
           </div>
         </div>
       </div>
@@ -37,12 +37,12 @@ export default async function DepartmentsPage() {
       {/* Content Placeholder */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="text-center text-gray-500">
-          <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <Map className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-lg font-medium text-gray-700 mb-2">
-            เนื้อหาแผนกที่ร้าน
+            เนื้อหาแผนที่ร้าน
           </p>
           <p className="text-sm text-gray-500">
-            ส่วนนี้พร้อมสำหรับเพิ่มข้อมูลแผนกต่างๆ ภายในร้าน
+            ส่วนนี้พร้อมสำหรับเพิ่มข้อมูลแผนที่และตำแหน่งที่ตั้งของร้าน
           </p>
         </div>
       </div>
