@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, Map } from 'lucide-react';
+import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
 import { PriceGroup, Announcement, AccessRequest } from '@/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/utils';
 import PriceGroupList from '@/components/PriceGroupList';
@@ -155,7 +155,7 @@ export default async function HomePage() {
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Map className="w-6 h-6 text-blue-600" />
+                <MapPin className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <p className="font-medium text-gray-900">แผนที่ร้าน</p>

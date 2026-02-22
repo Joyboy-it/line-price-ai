@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Map } from 'lucide-react';
+import { ArrowLeft, MapPin } from 'lucide-react';
 
 export default async function MapPage() {
   const session = await getServerSession(authOptions);
@@ -25,7 +25,7 @@ export default async function MapPage() {
         
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Map className="w-6 h-6 text-blue-600" />
+            <MapPin className="w-6 h-6 text-blue-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">แผนที่ร้าน</h1>
@@ -37,7 +37,7 @@ export default async function MapPage() {
       {/* Content Placeholder */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="text-center text-gray-500">
-          <Map className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-lg font-medium text-gray-700 mb-2">
             เนื้อหาแผนที่ร้าน
           </p>
