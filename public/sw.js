@@ -1,8 +1,9 @@
-const CACHE_NAME = 'scharoenchai-v2';
+const CACHE_NAME = 'scharoenchai-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/logo-v2.png',
+  '/pwa-icon-192.png',
+  '/pwa-icon-512.png',
   '/apple-touch-icon.png',
 ];
 
