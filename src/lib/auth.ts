@@ -148,6 +148,18 @@ export const authOptions: NextAuthOptions = {
       console.log('Session callback - Final session:', session);
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      console.log('Redirect callback - url:', url, 'baseUrl:', baseUrl);
+      // หลัง login สำเร็จ redirect ไปหน้าหลัก
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // ถ้าเป็น callback จาก LINE หรือ signin page -> ไปหน้าหลัก
+      if (url.startsWith('/')) {
+        return baseUrl + url;
+      }
+      return baseUrl;
+    },
   },
   pages: {
     signIn: '/auth/signin',
