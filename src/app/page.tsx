@@ -150,7 +150,7 @@ export default async function HomePage() {
 
           {/* Map Button */}
           <Link
-            href="/departments"
+            href="/map"
             className="mt-4 flex items-center justify-between p-4 bg-white rounded-lg hover:bg-blue-50 transition cursor-pointer border border-blue-200"
           >
             <div className="flex items-center gap-3">

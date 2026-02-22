@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Map } from 'lucide-react';
 
-export default async function DepartmentsPage() {
+export default async function MapPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
