@@ -81,38 +81,36 @@ export default function ImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/90 flex flex-col"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Close Button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-      >
-        <X className="w-8 h-8" />
-      </button>
-
-      {/* Navigation */}
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={handlePrev}
-            className="absolute left-4 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+      {/* Top Bar */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-black/40">
+        <p className="text-gray-300 text-sm">
+          {currentIndex + 1} / {images.length}
+          {currentImage.title && (
+            <span className="ml-2 text-white font-medium">{currentImage.title}</span>
+          )}
+        </p>
+        <div className="flex items-center gap-3">
+          <a
+            href={`${currentImage.url}${currentImage.url.includes('?') ? '&' : '?'}download=1`}
+            className="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white"
           >
-            <ChevronLeft className="w-8 h-8" />
-          </button>
+            <Download className="w-5 h-5" />
+          </a>
           <button
-            onClick={handleNext}
-            className="absolute right-4 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+            onClick={onClose}
+            className="text-white hover:text-gray-300"
           >
-            <ChevronRight className="w-8 h-8" />
+            <X className="w-7 h-7" />
           </button>
-        </>
-      )}
+        </div>
+      </div>
 
-      {/* Main Image */}
-      <div className={`relative w-full flex items-center justify-center px-16 pt-16 ${images.length > 1 ? 'pb-40' : 'pb-16'}`} style={{ height: '100%' }}>
+      {/* Main Image Area */}
+      <div className="relative flex-1 min-h-0">
         <Image
           src={currentImage.url}
           alt={currentImage.title || 'Image'}
@@ -120,17 +118,35 @@ export default function ImageLightbox({
           className="object-contain"
           sizes="100vw"
         />
+
+        {/* Navigation Arrows */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto py-2">
+        <div className="flex-shrink-0 flex justify-center gap-2 px-4 py-3 bg-black/40 overflow-x-auto">
           {images.map((img, idx) => (
             <button
               key={img.id}
               onClick={() => setCurrentIndex(idx)}
-              className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 ${
-                idx === currentIndex ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
+              className={`relative w-14 h-14 rounded-md overflow-hidden flex-shrink-0 border-2 transition-all ${
+                idx === currentIndex ? 'border-white' : 'border-transparent opacity-50 hover:opacity-100'
               }`}
             >
               <Image
@@ -138,34 +154,12 @@ export default function ImageLightbox({
                 alt={img.title || `Thumbnail ${idx + 1}`}
                 fill
                 className="object-cover"
-                sizes="64px"
+                sizes="56px"
               />
             </button>
           ))}
         </div>
       )}
-
-      {/* Bottom Info */}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div>
-            {currentImage.title && (
-              <h3 className="text-white font-medium text-sm">{currentImage.title}</h3>
-            )}
-            <p className="text-gray-300 text-sm">
-              {currentIndex + 1} / {images.length}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <a
-              href={`${currentImage.url}${currentImage.url.includes('?') ? '&' : '?'}download=1`}
-              className="p-2 bg-white/20 rounded-full hover:bg-white/30 text-white"
-            >
-              <Download className="w-5 h-5" />
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
