@@ -26,7 +26,7 @@ export default function BranchImage({ src, alt }: BranchImageProps) {
       src={src}
       alt={alt}
       fill
-      className="object-cover"
+      className="object-contain"
       onError={() => setError(true)}
     />
   );

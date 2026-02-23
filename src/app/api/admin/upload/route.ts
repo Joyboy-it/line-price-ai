@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { PriceGroup } from '@/types';
 import { sendPhotoFile, sendMessage } from '@/lib/telegram';
 import { sendLineMessage, createPriceUpdateMessage } from '@/lib/line';
+import { sendPushToUsers } from '@/lib/push';
 import { hasPermission } from '@/lib/permissions';
 import { readFile } from 'fs/promises';
 import path from 'path';
@@ -63,6 +64,33 @@ export async function POST(request: NextRequest) {
         session.user.id,
       ]
     );
+
+    // ส่ง Push Notification ให้ผู้ใช้ที่ subscribe (เฉพาะรูปแรก)
+    if (isFirstImage) {
+      try {
+        const users = await query<{ id: string }>(
+          `SELECT DISTINCT u.id
+           FROM users u
+           INNER JOIN user_group_access uga ON uga.user_id = u.id
+           WHERE uga.price_group_id = $1
+             AND u.is_active = true
+             AND (uga.expires_at IS NULL OR uga.expires_at > NOW())`,
+          [priceGroupId]
+        );
+
+        if (users.length > 0) {
+          const userIds = users.map((u) => u.id);
+          await sendPushToUsers(userIds, {
+            title: '📢 อัพเดทราคาใหม่',
+            body: `${priceGroup.name} - อัพเดทเมื่อสักครู่`,
+            url: `/price-groups/${priceGroupId}`,
+            groupId: priceGroupId,
+          });
+        }
+      } catch (pushError) {
+        console.error('Push notification error:', pushError);
+      }
+    }
 
     // ส่งข้อความไป LINE Group (เฉพาะรูปแรก + ต้องเปิด toggle)
     if (sendToLine && isFirstImage && priceGroup.line_group_id) {
