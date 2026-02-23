@@ -112,7 +112,7 @@ export default function ImageLightbox({
       )}
 
       {/* Main Image */}
-      <div className="relative w-full h-full flex items-center justify-center p-16">
+      <div className={`relative w-full flex items-center justify-center px-16 pt-16 ${images.length > 1 ? 'pb-40' : 'pb-16'}`} style={{ height: '100%' }}>
         <Image
           src={currentImage.url}
           alt={currentImage.title || 'Image'}
@@ -122,12 +122,35 @@ export default function ImageLightbox({
         />
       </div>
 
+      {/* Thumbnails */}
+      {images.length > 1 && (
+        <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto py-2">
+          {images.map((img, idx) => (
+            <button
+              key={img.id}
+              onClick={() => setCurrentIndex(idx)}
+              className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 ${
+                idx === currentIndex ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+            >
+              <Image
+                src={img.url}
+                alt={img.title || `Thumbnail ${idx + 1}`}
+                fill
+                className="object-cover"
+                sizes="64px"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Bottom Info */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-4 py-3">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div>
             {currentImage.title && (
-              <h3 className="text-white font-medium">{currentImage.title}</h3>
+              <h3 className="text-white font-medium text-sm">{currentImage.title}</h3>
             )}
             <p className="text-gray-300 text-sm">
               {currentIndex + 1} / {images.length}
@@ -143,29 +166,6 @@ export default function ImageLightbox({
           </div>
         </div>
       </div>
-
-      {/* Thumbnails */}
-      {images.length > 1 && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto">
-          {images.map((img, idx) => (
-            <button
-              key={img.id}
-              onClick={() => setCurrentIndex(idx)}
-              className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border-2 ${
-                idx === currentIndex ? 'border-white' : 'border-transparent'
-              }`}
-            >
-              <Image
-                src={img.url}
-                alt={img.title || `Thumbnail ${idx + 1}`}
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
