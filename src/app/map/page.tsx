@@ -28,10 +28,10 @@ const branches = [
   {
     id: 3,
     name: 'SB Steel Corporation',
-    subtitle: 'สาขาพระประแดง (พระสมุทรเจดีย์)',
+    subtitle: 'สาขาพระประแดง',
     description: 'รับซื้อและจำหน่ายเหล็กทุกประเภท เหล็กโครงสร้าง เหล็กแผ่น และเหล็กเส้น',
     mapUrl: 'https://maps.app.goo.gl/8DWrUcdDk2rzY2QW7',
-    embedUrl: 'https://www.google.com/maps?q=SB+STEEL+CORPORATION+CO.,LTD+(บริษัท+เอสบี+สตีล+คอร์ปอเรชั่น)&output=embed&z=16',
+    embedUrl: 'https://www.google.com/maps?q=SB+Steel+Corporation+พระประแดง&output=embed&z=16',
     region: 'central' as Region,
   },
   {
