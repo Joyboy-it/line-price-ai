@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { User } from '@/types';
-import { encode } from 'next-auth/jwt';
-import { cookies } from 'next/headers';
+import { v4 as uuidv4 } from 'uuid';
+import { logAction } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
         'UPDATE users SET name = $1, image = $2, last_login_at = NOW() WHERE id = $3',
         [displayName, pictureUrl || null, dbUser.id]
       );
+      await logAction(dbUser.id, 'login', 'user', dbUser.id, { method: 'liff' });
     } else {
       dbUser = await queryOne<User>(
         `INSERT INTO users (provider_id, provider, name, image, role, is_active)
@@ -46,44 +47,28 @@ export async function POST(req: NextRequest) {
          RETURNING *`,
         [userId, 'line', displayName, pictureUrl || null]
       );
+      if (dbUser) {
+        await logAction(dbUser.id, 'register', 'user', dbUser.id, { method: 'liff' });
+      }
     }
 
     if (!dbUser) {
       return NextResponse.json({ error: 'Failed to create/find user' }, { status: 500 });
     }
 
-    const secret = process.env.NEXTAUTH_SECRET!;
-    const tokenData = {
-      id: dbUser.id,
-      name: dbUser.name,
-      email: dbUser.email || null,
-      picture: dbUser.image,
-      role: dbUser.role,
-      provider_id: dbUser.provider_id,
-      shop_name: dbUser.shop_name,
-      is_active: dbUser.is_active,
-      sub: dbUser.provider_id,
-    };
+    const oneTimeToken = uuidv4();
+    await query(
+      `INSERT INTO liff_tokens (user_id, token) VALUES ($1, $2)`,
+      [dbUser.id, oneTimeToken]
+    );
 
-    const sessionToken = await encode({
-      token: tokenData,
-      secret,
-      maxAge: 30 * 24 * 60 * 60,
+    // Cleanup expired tokens
+    await query('DELETE FROM liff_tokens WHERE expires_at < NOW()');
+
+    return NextResponse.json({
+      success: true,
+      token: oneTimeToken,
     });
-
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieName = isProduction ? '__Secure-next-auth.session-token' : 'next-auth.session-token';
-
-    const cookieStore = await cookies();
-    cookieStore.set(cookieName, sessionToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: isProduction,
-      maxAge: 30 * 24 * 60 * 60,
-    });
-
-    return NextResponse.json({ callbackUrl: '/', success: true });
   } catch (error) {
     console.error('LIFF auth error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

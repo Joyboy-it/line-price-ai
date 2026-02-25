@@ -52,10 +52,11 @@ export default function LiffPage() {
 
         const data = await res.json();
 
-        if (res.ok && data.callbackUrl) {
+        if (res.ok && data.token) {
           setStatus('success');
-          setMessage('เข้าสู่ระบบสำเร็จ กำลังเข้าหน้าหลัก...');
-          window.location.href = data.callbackUrl;
+          setMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดแอป...');
+          const baseUrl = window.location.origin;
+          window.location.href = `${baseUrl}/api/auth/liff/callback?token=${data.token}`;
         } else {
           setStatus('error');
           setMessage(data.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
