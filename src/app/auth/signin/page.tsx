@@ -24,7 +24,10 @@ function SignInContent() {
     const ua = navigator.userAgent;
     const isIOSDevice = /iPhone|iPad|iPod/.test(ua);
     const isSafari = /Safari/.test(ua) && !/CriOS|Chrome/.test(ua);
-    setIsIOS(isIOSDevice && isSafari);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    
+    // แสดงปุ่ม LIFF ถ้าเป็น Safari iOS หรือ iOS PWA
+    setIsIOS(isIOSDevice && (isSafari || isStandalone));
   }, []);
 
   return (
