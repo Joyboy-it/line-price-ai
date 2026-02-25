@@ -12,6 +12,15 @@ export default function NotificationPrompt() {
       return;
     }
 
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true);
+
+    if (isIOS && !isStandalone) {
+      return;
+    }
+
     if (Notification.permission !== 'default') {
       return;
     }

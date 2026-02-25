@@ -1,8 +1,10 @@
 {
+  "id": "/",
   "name": "ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์",
-  "short_name": "ส.เจริญชัย รีไซเคิล วงษ์พาณิชย์",
+  "short_name": "ส.เจริญชัย รีไซเคิล",
   "description": "ระบบเช็คราคาสินค้าและข่าวสารล่าสุด",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#16a34a",
@@ -12,13 +14,13 @@
       "src": "/pwa-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/pwa-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

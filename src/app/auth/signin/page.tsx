@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from 'next-auth/react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 function SignInContent() {
@@ -11,6 +11,7 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const error = searchParams.get('error');
+  const [isIOS, setIsIOS] = useState(false);
 
   // Redirect ถ้า login แล้ว
   useEffect(() => {
@@ -18,6 +19,10 @@ function SignInContent() {
       router.push(callbackUrl);
     }
   }, [status, session, router, callbackUrl]);
+
+  useEffect(() => {
+    setIsIOS(/iPhone|iPad|iPod/.test(navigator.userAgent));
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-white">
@@ -41,6 +46,16 @@ function SignInContent() {
           </div>
         )}
 
+        {/* iOS: แสดง tip การเปิดใน LINE app */}
+        {isIOS && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
+            <p className="text-blue-800 text-xs font-medium mb-1">💡 เปิดจากแอป LINE ได้ง่ายกว่า</p>
+            <p className="text-blue-700 text-xs leading-relaxed">
+              หากได้รับลิงก์ในกลุ่ม LINE ให้กดเปิดจากในแอป LINE โดยตรง เพื่อเข้าสู่ระบบอัตโนมัติ
+            </p>
+          </div>
+        )}
+
         <button
           onClick={() => signIn('line', { callbackUrl })}
           className="w-full bg-[#00B900] hover:bg-[#00a000] text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition-colors"
@@ -51,7 +66,13 @@ function SignInContent() {
           เข้าสู่ระบบด้วย LINE
         </button>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
+        {isIOS && (
+          <p className="text-center text-gray-400 text-xs mt-3">
+            หากเข้าสู่ระบบไม่ได้ กรุณาตรวจสอบว่าคุณใช้อีเมล/รหัสผ่าน LINE
+          </p>
+        )}
+
+        <p className="text-center text-gray-500 text-sm mt-4">
           เข้าสู่ระบบเพื่อดูราคาสินค้าและข่าวสารล่าสุด
         </p>
       </div>
