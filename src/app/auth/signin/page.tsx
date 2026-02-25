@@ -21,7 +21,10 @@ function SignInContent() {
   }, [status, session, router, callbackUrl]);
 
   useEffect(() => {
-    setIsIOS(/iPhone|iPad|iPod/.test(navigator.userAgent));
+    const ua = navigator.userAgent;
+    const isIOSDevice = /iPhone|iPad|iPod/.test(ua);
+    const isSafari = /Safari/.test(ua) && !/CriOS|Chrome/.test(ua);
+    setIsIOS(isIOSDevice && isSafari);
   }, []);
 
   return (
