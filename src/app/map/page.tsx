@@ -31,7 +31,7 @@ const branches = [
     subtitle: 'สาขาพระประแดง',
     description: 'รับซื้อและจำหน่ายเหล็กทุกประเภท เหล็กโครงสร้าง เหล็กแผ่น และเหล็กเส้น',
     mapUrl: 'https://maps.app.goo.gl/8DWrUcdDk2rzY2QW7',
-    embedUrl: 'https://www.google.com/maps?q=SB+STEEL+CORPORATION+CO.,LTD+(บริษัท+เอสบี+สตีล+คอร์ปอเรชั่น)&output=embed&z=16',
+    embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3878.0700871109435!2d100.54753607589432!3d13.57599808679632!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e2a7e4f6f5f261%3A0xe6d5ed32e330bf7b!2sSB%20STEEL%20CORPORATION%20CO.%2CLTD!5e0!3m2!1sth!2sth!4v1709280000000!5m2!1sth!2sth',
     region: 'central' as Region,
   },
   {
