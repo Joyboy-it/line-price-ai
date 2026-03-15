@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight, Download, Maximize2, Minimize2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 interface ImageLightboxProps {
   images: { id: string; url: string; title?: string }[];
@@ -18,7 +18,6 @@ export default function ImageLightbox({
   onClose,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [isZoomed, setIsZoomed] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
@@ -116,33 +115,23 @@ export default function ImageLightbox({
           src={currentImage.url}
           alt={currentImage.title || 'Image'}
           fill
-          className={`object-contain transition-transform duration-300 ${isZoomed ? 'scale-150 cursor-move' : 'cursor-default'}`}
+          className="object-contain"
           sizes="100vw"
         />
 
-        {/* Zoom Button */}
-        <button
-          onClick={() => setIsZoomed(!isZoomed)}
-          className="absolute top-4 right-16 md:right-20 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg transition-all z-10 flex items-center gap-2"
-          aria-label={isZoomed ? 'ซูมออก' : 'ซูมเข้า'}
-        >
-          {isZoomed ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-          <span className="hidden md:inline text-sm">{isZoomed ? 'ซูมออก' : 'ซูมเข้า'}</span>
-        </button>
-
-        {/* Navigation Arrows - Moved to Bottom */}
+        {/* Navigation Arrows - Bottom with more margin */}
         {images.length > 1 && (
           <>
             <button
               onClick={handlePrev}
-              className="absolute left-4 bottom-20 md:bottom-24 bg-black/30 hover:bg-black/60 backdrop-blur-sm text-white transition-all opacity-70 hover:opacity-100 z-10 p-3 md:p-2.5 rounded-full"
+              className="absolute left-4 bottom-24 md:bottom-28 bg-black/30 hover:bg-black/60 backdrop-blur-sm text-white transition-all opacity-70 hover:opacity-100 z-10 p-3 md:p-2.5 rounded-full"
               aria-label="ภาพก่อนหน้า"
             >
               <ChevronLeft className="w-7 h-7 md:w-6 md:h-6" />
             </button>
             <button
               onClick={handleNext}
-              className="absolute right-4 bottom-20 md:bottom-24 bg-black/30 hover:bg-black/60 backdrop-blur-sm text-white transition-all opacity-70 hover:opacity-100 z-10 p-3 md:p-2.5 rounded-full"
+              className="absolute right-4 bottom-24 md:bottom-28 bg-black/30 hover:bg-black/60 backdrop-blur-sm text-white transition-all opacity-70 hover:opacity-100 z-10 p-3 md:p-2.5 rounded-full"
               aria-label="ภาพถัดไป"
             >
               <ChevronRight className="w-7 h-7 md:w-6 md:h-6" />
