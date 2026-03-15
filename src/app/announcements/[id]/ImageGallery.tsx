@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Maximize2 } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
 
 interface AnnouncementImage {
@@ -51,16 +50,6 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
             
             {/* Hover Overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all" />
-            
-            {/* Zoom Button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); openLightbox(index); }}
-              className="absolute top-3 right-3 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100 md:opacity-100"
-              aria-label="ขยายภาพ"
-            >
-              <Maximize2 className="w-4 h-4" />
-              <span className="hidden md:inline text-xs">ขยาย</span>
-            </button>
           </div>
         ))}
       </div>

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { PriceGroupImage } from '@/types';
 import { formatDateTime } from '@/lib/utils';
-import { Maximize2 } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
 
 interface ImageGalleryProps {
@@ -41,16 +40,6 @@ export default function ImageGallery({ images }: ImageGalleryProps) {
           
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all" />
-          
-          {/* Zoom Button - Top Right */}
-          <button
-            onClick={(e) => { e.stopPropagation(); openLightbox(0); }}
-            className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100 md:opacity-100"
-            aria-label="ขยายภาพ"
-          >
-            <Maximize2 className="w-5 h-5" />
-            <span className="hidden md:inline text-sm">ขยายภาพ</span>
-          </button>
           
           {/* Image Counter - Bottom Left */}
           <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-sm">
