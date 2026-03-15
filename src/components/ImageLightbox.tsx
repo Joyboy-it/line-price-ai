@@ -42,11 +42,27 @@ export default function ImageLightbox({
     try {
       const response = await fetch(images[currentIndex].url);
       const blob = await response.blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const rawTitle = images[currentIndex].title || `image-${currentIndex + 1}`;
+      const baseName = rawTitle.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '');
+      const fileName = `${baseName}.${ext}`;
+
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        try {
+          const file = new File([blob], fileName, { type: blob.type });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;
+          }
+        } catch {
+          // share cancelled or not supported — fall through
+        }
+        window.open(images[currentIndex].url, '_blank');
+        return;
+      }
+
       const blobUrl = URL.createObjectURL(blob);
-      const ext = blob.type.includes('png') ? 'png' : blob.type.includes('gif') ? 'gif' : blob.type.includes('webp') ? 'webp' : 'jpg';
-      const fileName = images[currentIndex].title
-        ? `${images[currentIndex].title}.${ext}`
-        : `image-${currentIndex + 1}.${ext}`;
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = fileName;
