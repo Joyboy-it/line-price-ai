@@ -33,31 +33,69 @@ export default function ImageLightbox({
   const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
   const touchMovedRef = useRef(false);
   const lastTapRef = useRef<number>(0);
+  const downloadBlobRef = useRef<Blob | null>(null);
+  const downloadExtRef = useRef('jpg');
 
   useEffect(() => { setCurrentIndex(initialIndex); }, [initialIndex]);
+
+  useEffect(() => {
+    if (!isOpen || images.length === 0) return;
+
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const response = await fetch(images[currentIndex].url, { signal: controller.signal });
+        if (!response.ok) throw new Error('Failed to preload image');
+        const blob = await response.blob();
+        downloadBlobRef.current = blob;
+        const mimeExt = (blob.type.split('/')[1] || '').replace('jpeg', 'jpg').toLowerCase();
+        downloadExtRef.current = mimeExt || 'jpg';
+      } catch {
+        downloadBlobRef.current = null;
+        downloadExtRef.current = 'jpg';
+      }
+    })();
+
+    return () => controller.abort();
+  }, [isOpen, currentIndex, images]);
 
   const handleDownload = useCallback(async () => {
     if (isDownloading) return;
     setIsDownloading(true);
 
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isIOS =
+      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const ext = downloadExtRef.current || 'jpg';
+    const fileName = `${crypto.randomUUID()}.${ext}`;
 
     if (isIOS) {
-      // iOS: MUST call window.open synchronously before any await
-      // to preserve the user gesture context (iOS blocks popups after await)
-      // Image is served inline (no ?download=1) so Safari shows it as image.
-      // User can long-press the image → "Save Image to Photos"
-      window.open(images[currentIndex].url, '_blank');
+      try {
+        const blob = downloadBlobRef.current;
+        if (blob && navigator.canShare) {
+          const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            setIsDownloading(false);
+            return;
+          }
+        }
+      } catch {
+        // continue to fallback
+      }
+
+      const popup = window.open(images[currentIndex].url, '_blank');
+      if (!popup) {
+        window.location.href = images[currentIndex].url;
+      }
       setIsDownloading(false);
       return;
     }
 
     // Desktop / Android: fetch → blob → UUID filename download
     try {
-      const response = await fetch(images[currentIndex].url);
-      const blob = await response.blob();
-      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const blob = downloadBlobRef.current ?? (await (await fetch(images[currentIndex].url)).blob());
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
