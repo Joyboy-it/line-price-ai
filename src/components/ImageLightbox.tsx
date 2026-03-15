@@ -39,29 +39,25 @@ export default function ImageLightbox({
   const handleDownload = useCallback(async () => {
     if (isDownloading) return;
     setIsDownloading(true);
+
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+    if (isIOS) {
+      // iOS: MUST call window.open synchronously before any await
+      // to preserve the user gesture context (iOS blocks popups after await)
+      // Image is served inline (no ?download=1) so Safari shows it as image.
+      // User can long-press the image → "Save Image to Photos"
+      window.open(images[currentIndex].url, '_blank');
+      setIsDownloading(false);
+      return;
+    }
+
+    // Desktop / Android: fetch → blob → UUID filename download
     try {
       const response = await fetch(images[currentIndex].url);
       const blob = await response.blob();
       const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-      const rawTitle = images[currentIndex].title || `image-${currentIndex + 1}`;
-      const baseName = rawTitle.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '');
-      const fileName = `${baseName}.${ext}`;
-
-      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        try {
-          const file = new File([blob], fileName, { type: blob.type });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            return;
-          }
-        } catch {
-          // share cancelled or not supported — fall through
-        }
-        window.open(images[currentIndex].url, '_blank');
-        return;
-      }
-
+      const fileName = `${crypto.randomUUID()}.${ext}`;
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -367,7 +363,7 @@ export default function ImageLightbox({
           Scroll เพื่อซูม · ดับเบิลคลิกเพื่อซูม 2.5× · ลากเพื่อเลื่อนภาพ
         </p>
         <p className="text-center text-gray-500 text-[11px] mt-1 md:hidden">
-          Pinch เพื่อซูม · แตะ 2 ครั้งเพื่อซูม · ปัดซ้าย/ขวาเพื่อเปลี่ยนภาพ
+          Pinch เพื่อซูม · แตะ 2 ครั้งเพื่อซูม · ปัดซ้าย/ขวาเพื่อเปลี่ยนภาพ · กด ⬇ เพื่อเปิดภาพ แล้วกดค้างเพื่อบันทึก
         </p>
       </div>
 
