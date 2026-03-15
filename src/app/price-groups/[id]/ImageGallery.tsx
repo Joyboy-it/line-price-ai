@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { PriceGroupImage } from '@/types';
 import { formatDateTime } from '@/lib/utils';
-import { Search, ZoomIn } from 'lucide-react';
+import { Maximize2 } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
 
 interface ImageGalleryProps {
@@ -30,23 +30,30 @@ export default function ImageGallery({ images }: ImageGalleryProps) {
     <>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {/* Main Image */}
-        <div className="relative aspect-[4/3] bg-gray-100">
+        <div className="relative aspect-[4/3] bg-gray-100 group cursor-zoom-in" onClick={() => openLightbox(0)}>
           <Image
             src={`/api/files${images[0].file_path}`}
             alt={images[0].title || 'Price Image'}
             fill
-            className="object-contain cursor-pointer"
-            onClick={() => openLightbox(0)}
+            className="object-contain"
             sizes="(max-width: 768px) 100vw, 800px"
           />
+          
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all" />
+          
+          {/* Zoom Button - Top Right */}
           <button
-            onClick={() => openLightbox(0)}
-            className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            onClick={(e) => { e.stopPropagation(); openLightbox(0); }}
+            className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100 md:opacity-100"
+            aria-label="ขยายภาพ"
           >
-            <ZoomIn className="w-5 h-5" />
-            ดูเต็มจอ
+            <Maximize2 className="w-5 h-5" />
+            <span className="hidden md:inline text-sm">ขยายภาพ</span>
           </button>
-          <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-lg text-sm">
+          
+          {/* Image Counter - Bottom Left */}
+          <div className="absolute bottom-4 left-4 bg-black/40 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-sm">
             {selectedIndex + 1} / {images.length}
           </div>
         </div>
