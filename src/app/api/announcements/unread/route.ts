@@ -12,18 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Check if user has access
-    const accessCount = await query<{ count: string }>(
-      'SELECT COUNT(*) as count FROM user_group_access WHERE user_id = $1',
-      [session.user.id]
-    );
-
-    const hasAccess = parseInt(accessCount[0]?.count || '0') > 0;
-    if (!hasAccess) {
-      return NextResponse.json({ announcements: [] });
-    }
-
-    // Get unread announcements
+    // Get unread announcements for all authenticated users
     const announcements = await query<Announcement>(
       `SELECT a.*, u.name as creator_name,
         (SELECT COUNT(*) FROM announcement_images ai WHERE ai.announcement_id = a.id) as image_count
