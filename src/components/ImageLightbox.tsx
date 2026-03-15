@@ -24,6 +24,7 @@ export default function ImageLightbox({
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const lastTranslateRef = useRef({ x: 0, y: 0 });
   const lastScaleRef = useRef(1);
@@ -34,6 +35,31 @@ export default function ImageLightbox({
   const lastTapRef = useRef<number>(0);
 
   useEffect(() => { setCurrentIndex(initialIndex); }, [initialIndex]);
+
+  const handleDownload = useCallback(async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(images[currentIndex].url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const ext = blob.type.includes('png') ? 'png' : blob.type.includes('gif') ? 'gif' : blob.type.includes('webp') ? 'webp' : 'jpg';
+      const fileName = images[currentIndex].title
+        ? `${images[currentIndex].title}.${ext}`
+        : `image-${currentIndex + 1}.${ext}`;
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch {
+      window.open(images[currentIndex].url, '_blank');
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [currentIndex, images, isDownloading]);
 
   const resetZoom = useCallback(() => {
     setScale(1);
@@ -213,13 +239,18 @@ export default function ImageLightbox({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-gray-400 text-xs tabular-nums w-9 text-right">{Math.round(scale * 100)}%</span>
-          <a
-            href={`${currentImage.url}${currentImage.url.includes('?') ? '&' : '?'}download=1`}
-            className="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="p-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 rounded-full text-white transition-colors"
             aria-label="ดาวน์โหลด"
           >
-            <Download className="w-5 h-5" />
-          </a>
+            {isDownloading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Download className="w-5 h-5" />
+            )}
+          </button>
           <button
             onClick={onClose}
             className="p-1.5 text-white hover:text-gray-300 transition-colors"
