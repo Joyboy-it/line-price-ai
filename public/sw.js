@@ -49,16 +49,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const urlToOpen = event.notification.data.url;
+  const urlToOpen = new URL(event.notification.data.url || '/', self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // Try to find an existing window with the same URL
         for (const client of clientList) {
           if (client.url === urlToOpen && 'focus' in client) {
             return client.focus();
           }
         }
+        // If no matching window, try to find any window and navigate it
+        if (clientList.length > 0) {
+          const client = clientList[0];
+          if ('navigate' in client) {
+            return client.navigate(urlToOpen).then(client => client.focus());
+          }
+          return client.focus();
+        }
+        // Otherwise open a new window
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }

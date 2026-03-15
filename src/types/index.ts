@@ -134,6 +134,13 @@ export interface UserLog {
   user?: User;
 }
 
+export interface AnnouncementRead {
+  id: string;
+  announcement_id: string;
+  user_id: string;
+  read_at: Date;
+}
+
 export interface DashboardStats {
   pending_requests: number;
   approved_requests: number;

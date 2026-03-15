@@ -6,6 +6,7 @@ import { uploadFile } from '@/lib/storage';
 import { Announcement } from '@/types';
 import { logActionWithIp } from '@/lib/log-helper';
 import { hasPermission } from '@/lib/permissions';
+import { sendAnnouncementNotification } from '@/lib/push';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -80,6 +81,16 @@ export async function POST(request: NextRequest) {
     }
 
     await logActionWithIp(request, session.user.id, 'create_announcement', 'announcement', newAnnouncement.id, { title });
+
+    // Send push notification if announcement is published
+    if (is_published) {
+      try {
+        await sendAnnouncementNotification(newAnnouncement.id, title, body || '');
+        console.log(`Push notification sent for announcement: ${newAnnouncement.id}`);
+      } catch (error) {
+        console.error('Failed to send push notification:', error);
+      }
+    }
 
     return NextResponse.json(newAnnouncement, { status: 201 });
   } catch (error) {

@@ -11,6 +11,7 @@ import PriceGroupList from '@/components/PriceGroupList';
 import RequestAccessForm from '@/components/RequestAccessForm';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
+import AnnouncementPopup from '@/components/AnnouncementPopup';
 
 async function getUserPriceGroups(userId: string): Promise<PriceGroup[]> {
   const groups = await query<PriceGroup>(
@@ -98,6 +99,7 @@ export default async function HomePage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <IOSInstallPrompt />
       <NotificationPrompt />
+      <AnnouncementPopup />
       {/* Map Button - Always first for approved users */}
       {accessStatus.hasAccess && (
         <section className="mb-8">

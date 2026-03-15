@@ -79,3 +79,27 @@ export async function sendPushToUsers(
 
   return { total: subscriptions.length, success: successCount };
 }
+
+export async function sendAnnouncementNotification(
+  announcementId: string,
+  title: string,
+  body: string
+): Promise<{ total: number; success: number }> {
+  // Get all users with access (approved users)
+  const users = await query<{ user_id: string }>(
+    `SELECT DISTINCT user_id FROM user_group_access`
+  );
+
+  if (users.length === 0) return { total: 0, success: 0 };
+
+  const userIds = users.map(u => u.user_id);
+  const bodyPreview = body && body.length > 100 ? body.substring(0, 100) + '...' : body || '';
+
+  const payload: PushPayload = {
+    title: `ประกาศใหม่: ${title}`,
+    body: bodyPreview,
+    url: `/announcements/${announcementId}`,
+  };
+
+  return sendPushToUsers(userIds, payload);
+}
