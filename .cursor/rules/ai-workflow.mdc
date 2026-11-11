@@ -1,0 +1,46 @@
+---
+description: ลำดับการใช้ skill และกฎของโปรเจกต์ line-price-ai
+alwaysApply: true
+---
+
+# AI Workflow
+
+คู่มือเต็ม: `docs/AI_SKILLS_SETUP.md`
+
+## ลำดับงาน
+1. โจทย์ยังไม่ชัด: `/grill-with-docs` จนไม่มีคำถามค้าง
+2. ออกแบบ: `domain-modeling` และ `codebase-design` ถ้ามีหน้าจอให้อ่าน `design-system/line-price-ai/MASTER.md` และใช้ `ui-ux-pro-max` จากนั้นหยุดรออนุมัติ
+3. วางแผน: `/writing-plans` ระบุไฟล์ที่จะแก้และวิธีตรวจทุกขั้น บันทึกที่ `docs/superpowers/plans/` จากนั้นหยุดรออนุมัติ
+4. พัฒนา: `/implement` (หนึ่งงาน) หรือ `/implement-spec` (หลายงาน)
+5. บั๊ก: `/systematic-debugging` เท่านั้น
+6. ก่อนบอกว่าเสร็จ: `verification-before-completion` แล้ว `finishing-a-development-branch` หยุดรออนุมัติก่อน merge
+
+งานเล็กที่ผู้ใช้ระบุไฟล์และพฤติกรรมชัดแล้ว ข้ามขั้น 1–3 ได้ ขั้น 6 ข้ามไม่ได้
+
+## ห้ามซ้ำซ้อน
+- skill ของ Superpowers บางตัวไม่ได้ติดตั้งโดยตั้งใจ เมื่อ skill อ้างถึงให้ใช้ตัวแทนนี้:
+  - `superpowers:subagent-driven-development` หรือ `superpowers:executing-plans` ใช้ `/implement` หรือ `/implement-spec`
+  - `superpowers:test-driven-development` ใช้ `tdd`
+  - `superpowers:requesting-code-review` ใช้ `code-review`
+  - `superpowers:brainstorming` ใช้ `grill-with-docs`
+  - `superpowers:using-git-worktrees` ไม่ใช้ ทำงานบน branch ปกติ
+- TDD ใช้ `tdd` ชุดเดียว และ review ใช้ `code-review` ชุดเดียวต่องาน
+- ระบบดีไซน์มีแหล่งเดียวคือ `design-system/line-price-ai/MASTER.md`
+- ห้ามสลับ workflow ดีบักกลางงาน
+
+## หลักการเขียนโค้ด
+- เขียนเท่าที่โจทย์ต้องการ ไม่เพิ่มฟีเจอร์ abstraction หรือ config ที่ไม่ได้ขอ
+- แก้เฉพาะบรรทัดที่เกี่ยวกับงาน ไม่จัดรูปแบบ ไม่ refactor โค้ดข้างเคียง
+- ลบเฉพาะของที่การแก้ของเราทำให้ไม่ถูกใช้ ถ้าเจอโค้ดตายเดิมให้แจ้ง ไม่ต้องลบ
+- ห้ามตัด validation, การจัดการ error, ความปลอดภัย หรือ accessibility เพื่อให้โค้ดสั้นลง
+- ไม่แน่ใจให้ถาม ไม่เดาแล้วทำต่อ
+
+## กฎเฉพาะโปรเจกต์
+- ฐานข้อมูล (PostgreSQL ผ่าน `pg`):
+  - migration อยู่ที่ `sql/migrations/` ห้ามแก้ไฟล์ที่มีอยู่
+  - ถ้าต้องเปลี่ยนสคีมาให้เพิ่มไฟล์ใหม่เลขถัดไป (`013_<ชื่อ>.sql` ขึ้นไป)
+  - เปลี่ยน enum `log_action` ด้วย `ALTER TYPE ... ADD VALUE IF NOT EXISTS` ในไฟล์ใหม่
+  - ไม่มีตัวรัน migration อัตโนมัติ ห้ามรันกับฐานข้อมูลจนกว่าผู้ใช้สั่ง
+- โมดูลกลาง: `src/lib/db.ts`, `src/lib/auth.ts`, `src/lib/permissions.ts`, `src/lib/permissions-db.ts`, `src/middleware.ts`, `src/lib/line.ts` ถ้าต้องแตะ แผนต้องระบุไว้ก่อนลงมือ
+- การตรวจ: `npm test` (Vitest), `npm run lint`, `npm run build` ห้ามอ้างว่าผ่านถ้าไม่ได้รัน
+- ไฟล์ลับ: ห้ามแสดงค่าใน `.env*` และห้าม commit
