@@ -10,7 +10,8 @@ export type Permission =
   | 'manage_announcements'
   | 'approve_requests'
   | 'view_analytics'
-  | 'manage_roles';
+  | 'manage_roles'
+  | 'manage_factory_orders';
 
 // Default permissions (ใช้ทั้ง client และ server)
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
@@ -25,6 +26,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'approve_requests',
     'view_analytics',
     'manage_roles',
+    'manage_factory_orders',
   ],
   operator: [
     'view_dashboard',
@@ -35,6 +37,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'manage_announcements',
     'approve_requests',
     'view_analytics',
+    'manage_factory_orders',
   ],
   worker: [
     'view_dashboard',

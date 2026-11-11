@@ -21,6 +21,13 @@ export async function GET(
     const { path: pathSegments } = await params;
     const filePath = path.join(UPLOAD_DIR, ...pathSegments);
 
+    // Direct-to-factory files are served only through routes that check ownership or staff permission.
+    const privateDir = path.resolve(UPLOAD_DIR, 'direct-to-factory').toLowerCase();
+    const resolvedPath = path.resolve(filePath).toLowerCase();
+    if (resolvedPath === privateDir || resolvedPath.startsWith(privateDir + path.sep)) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
     if (!existsSync(filePath)) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }

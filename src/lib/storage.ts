@@ -18,14 +18,15 @@ export interface UploadResult {
 
 export async function uploadFile(
   file: File,
-  subDir: string = 'images'
+  subDir: string = 'images',
+  allowedTypes: string[] = ALLOWED_TYPES
 ): Promise<UploadResult> {
   try {
     if (file.size > MAX_FILE_SIZE) {
       return { success: false, error: 'File too large' };
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!allowedTypes.includes(file.type)) {
       return { success: false, error: 'Invalid file type' };
     }
 

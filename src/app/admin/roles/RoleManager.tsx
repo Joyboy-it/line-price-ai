@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Users, Image, FolderOpen, MapPin, FileText, Bell, BarChart3, Check, Power, Search, Filter, ChevronRight } from 'lucide-react';
+import { Shield, Users, Image, FolderOpen, MapPin, FileText, Bell, BarChart3, Check, Power, Search, Filter, ChevronRight, Factory } from 'lucide-react';
 
 interface Permission {
   id: string;
@@ -38,6 +38,7 @@ const PERMISSIONS: Permission[] = [
   { id: 'manage_price_groups', name: 'จัดการกลุ่มราคา', description: 'เพิ่ม แก้ไข ลบกลุ่มราคา', icon: <FolderOpen className="w-4 h-4" />, category: 'content' },
   { id: 'upload_images', name: 'อัปโหลดรูปภาพ', description: 'อัปโหลดรูปภาพราคา', icon: <Image className="w-4 h-4" />, category: 'content' },
   { id: 'manage_announcements', name: 'จัดการประกาศ', description: 'เพิ่ม แก้ไข ลบประกาศ', icon: <Bell className="w-4 h-4" />, category: 'content' },
+  { id: 'manage_factory_orders', name: 'จัดการส่งตรงเข้าโรงงาน', description: 'ดูและยืนยันออเดอร์ ตั้งค่าโรงงาน ตัวแทน และราคา', icon: <Factory className="w-4 h-4" />, category: 'content' },
   { id: 'manage_roles', name: 'จัดการสิทธิ์', description: 'กำหนดสิทธิ์ผู้ใช้', icon: <Shield className="w-4 h-4" />, category: 'system' },
 ];
 
@@ -56,7 +57,7 @@ const DEFAULT_ROLES: Role[] = [
     displayName: 'Operator',
     description: 'ผู้ปฏิบัติงาน จัดการข้อมูลทั่วไป',
     color: 'orange',
-    permissions: ['view_dashboard', 'manage_users', 'manage_branches', 'manage_price_groups', 'upload_images', 'manage_announcements', 'approve_requests', 'view_analytics'],
+    permissions: ['view_dashboard', 'manage_users', 'manage_branches', 'manage_price_groups', 'upload_images', 'manage_announcements', 'approve_requests', 'view_analytics', 'manage_factory_orders'],
   },
   {
     id: 'worker',

@@ -4,7 +4,8 @@ import { query } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
+import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin, Factory } from 'lucide-react';
+import { isApprovedCustomer } from '@/lib/direct-to-factory/customer-access';
 import { PriceGroup, Announcement, AccessRequest } from '@/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/utils';
 import PriceGroupList from '@/components/PriceGroupList';
@@ -89,10 +90,11 @@ export default async function HomePage() {
     );
   }
 
-  const [priceGroups, announcements, accessStatus] = await Promise.all([
+  const [priceGroups, announcements, accessStatus, canSendToFactory] = await Promise.all([
     getUserPriceGroups(session.user.id),
     getActiveAnnouncements(),
     getUserAccessStatus(session.user.id),
+    isApprovedCustomer(session.user.id),
   ]);
 
   return (
@@ -114,6 +116,26 @@ export default async function HomePage() {
               <div>
                 <p className="font-medium text-gray-900">แผนที่ร้าน</p>
                 <p className="text-sm text-gray-500">ข้อมูลตำแหน่งและแผนที่</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </Link>
+        </section>
+      )}
+
+      {canSendToFactory && (
+        <section className="mb-8">
+          <Link
+            href="/direct-to-factory"
+            className="flex items-center justify-between p-4 bg-white rounded-lg hover:bg-green-50 transition cursor-pointer border border-green-200 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Factory className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">ส่งตรงเข้าโรงงาน</p>
+                <p className="text-sm text-gray-500">แจ้งส่งสินค้าและดาวน์โหลดเอกสารเข้าโรงงาน</p>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />

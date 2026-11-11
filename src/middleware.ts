@@ -15,6 +15,7 @@ const PATH_TO_PERMISSION: Record<string, string> = {
   '/admin/announcements': 'manage_announcements',
   '/admin/price-groups': 'upload_images',
   '/admin/price-images': 'upload_images',
+  '/admin/direct-to-factory': 'manage_factory_orders',
 };
 
 // Default permissions สำหรับแต่ละ role (fallback)
@@ -22,11 +23,12 @@ const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: [
     'view_dashboard', 'manage_users', 'toggle_user_status', 'manage_branches',
     'manage_price_groups', 'upload_images', 'manage_announcements',
-    'approve_requests', 'view_analytics', 'manage_roles',
+    'approve_requests', 'view_analytics', 'manage_roles', 'manage_factory_orders',
   ],
   operator: [
     'view_dashboard', 'manage_users', 'manage_branches', 'manage_price_groups',
     'upload_images', 'manage_announcements', 'approve_requests', 'view_analytics',
+    'manage_factory_orders',
   ],
   worker: ['view_dashboard', 'upload_images'],
   user: [],

@@ -3,6 +3,7 @@
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
   Menu,
@@ -20,12 +21,25 @@ import {
   Bell,
   Image as ImageIcon,
   FileText,
+  Factory,
+  Truck,
 } from 'lucide-react';
 import { Permission } from '@/lib/permissions';
 import { usePermissions } from '@/hooks/usePermissions';
 
+const adminNavLinks: { href: string; label: string; icon: typeof Settings; permission?: Permission }[] = [
+  { href: '/admin', label: 'Admin', icon: Settings },
+  { href: '/admin/direct-to-factory', label: 'ส่งตรงเข้าโรงงาน', icon: Factory, permission: 'manage_factory_orders' },
+  { href: '/admin/shipment-notice', label: 'แจ้งส่งสินค้า', icon: Truck },
+];
+
+function isNavLinkActive(pathname: string, href: string): boolean {
+  return href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(href + '/');
+}
+
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -37,6 +51,9 @@ export default function Navbar() {
   
   // Use permissions from database
   const { hasPermission: canAccess, isLoading: permissionsLoading } = usePermissions();
+  const visibleAdminNavLinks = adminNavLinks.filter(
+    (link) => !link.permission || canAccess(link.permission)
+  );
 
   // Close dropdown and mobile menu when clicking outside
   useEffect(() => {
@@ -81,15 +98,20 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             {status === 'authenticated' && session?.user && (
               <>
-                {(isAdmin || isOperator || isWorker) && (
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-1 text-gray-600 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Admin
-                  </Link>
-                )}
+                {(isAdmin || isOperator || isWorker) &&
+                  visibleAdminNavLinks.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={isNavLinkActive(pathname, href) ? 'page' : undefined}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium ${
+                        isNavLinkActive(pathname, href) ? 'text-green-600' : 'text-gray-600 hover:text-green-600'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </Link>
+                  ))}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -280,6 +302,24 @@ export default function Navbar() {
                     <p className="text-sm text-gray-500">{session.user.email}</p>
                   </div>
                 </div>
+                {(isAdmin || isOperator || isWorker) && (
+                  <div className="pb-3 border-b border-gray-100">
+                    {visibleAdminNavLinks.map(({ href, label, icon: Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-current={isNavLinkActive(pathname, href) ? 'page' : undefined}
+                        className={`flex items-center gap-2 py-2 ${
+                          isNavLinkActive(pathname, href) ? 'text-green-600' : 'text-gray-700 hover:text-green-600'
+                        }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 {canAccess('view_dashboard') && (
                   <>
                     <Link
