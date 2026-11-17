@@ -47,3 +47,6 @@ next-env.d.ts
 # datamap
 /datamap
 /datamap/*
+
+# local factory list and generated sample offers
+/Documents/

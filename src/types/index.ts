@@ -23,6 +23,9 @@ export interface User {
   bank_info: Record<string, string> | null;
   note: string | null;
   is_active: boolean;
+  can_view_factory_orders: boolean;
+  can_create_factory_order: boolean;
+  can_receive_goods: boolean;
   email_verified_at: Date | null;
   last_login_at: Date | null;
   created_at: Date;

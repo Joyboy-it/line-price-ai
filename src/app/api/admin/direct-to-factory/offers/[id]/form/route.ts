@@ -21,7 +21,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   const offer = await queryOne<OfferForm>(
-    'SELECT form_file_path, form_file_name, form_mime_type FROM agent_offers WHERE id = $1',
+    `SELECT COALESCE(ff.file_path, ao.form_file_path) AS form_file_path,
+            COALESCE(ff.file_name, ao.form_file_name) AS form_file_name,
+            COALESCE(ff.mime_type, ao.form_mime_type) AS form_mime_type
+     FROM agent_offers ao
+     LEFT JOIN factory_forms ff ON ff.id = ao.form_id
+     WHERE ao.id = $1`,
     [id]
   );
   if (!offer?.form_file_path || !offer.form_file_name) {

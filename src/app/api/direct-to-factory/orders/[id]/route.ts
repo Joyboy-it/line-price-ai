@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logActionWithIp } from '@/lib/log-helper';
 import { requireCustomer } from '@/lib/direct-to-factory/customer-access';
-import { canCustomerEdit, toCustomerView } from '@/lib/direct-to-factory/order-rules';
+import { canCustomerCancel, canCustomerEdit, toCustomerView } from '@/lib/direct-to-factory/order-rules';
 import {
   cancelCustomerOrder,
   getCustomerOrder,
@@ -21,7 +21,7 @@ const LOCKED = () =>
   NextResponse.json({ error: 'เจ้าหน้าที่ยืนยันรายการนี้แล้ว จึงแก้ไขหรือยกเลิกไม่ได้' }, { status: 409 });
 
 export async function GET(_request: NextRequest, { params }: Params) {
-  const guard = await requireCustomer();
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
   const { id } = await params;
@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const guard = await requireCustomer();
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
   const { id } = await params;
@@ -88,7 +88,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 /** Cancels the order; the row is kept for history. */
 export async function DELETE(request: NextRequest, { params }: Params) {
-  const guard = await requireCustomer();
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
   const { id } = await params;
@@ -98,6 +98,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const existing = await getCustomerOrder(id, userId);
     if (!existing) return NOT_FOUND();
+    if (!canCustomerCancel(existing)) {
+      return NextResponse.json({ error: 'รายการนี้มีการดำเนินการแล้ว จึงยกเลิกไม่ได้' }, { status: 409 });
+    }
     if (!(await cancelCustomerOrder(id, userId))) return LOCKED();
 
     await logActionWithIp(request, userId, 'cancel_factory_order', 'factory_order', id, { by: 'customer' });

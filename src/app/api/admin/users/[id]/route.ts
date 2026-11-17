@@ -43,7 +43,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { shop_name, phone, address, bank_info, note, role, is_active } = body;
+    const { shop_name, phone, address, bank_info, note, role, is_active, can_view_factory_orders, can_receive_goods } = body;
 
     // Build dynamic update query based on provided fields
     const updateFields = [];
@@ -92,6 +92,18 @@ export async function PATCH(
       paramIndex++;
     }
 
+    if (typeof can_view_factory_orders === 'boolean') {
+      updateFields.push(`can_view_factory_orders = $${paramIndex}`);
+      updateValues.push(can_view_factory_orders);
+      paramIndex++;
+    }
+
+    if (typeof can_receive_goods === 'boolean') {
+      updateFields.push(`can_receive_goods = $${paramIndex}`);
+      updateValues.push(can_receive_goods);
+      paramIndex++;
+    }
+
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
@@ -112,6 +124,8 @@ export async function PATCH(
       address,
       role,
       is_active,
+      can_view_factory_orders,
+      can_receive_goods,
     });
 
     revalidatePath('/admin/users');

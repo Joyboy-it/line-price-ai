@@ -4,8 +4,8 @@ import { query } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin, Factory } from 'lucide-react';
-import { isApprovedCustomer } from '@/lib/direct-to-factory/customer-access';
+import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin, Factory, Plus } from 'lucide-react';
+import { canReceiveGoods, getFactoryHomeAccess } from '@/lib/direct-to-factory/customer-access';
 import { PriceGroup, Announcement, AccessRequest } from '@/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/utils';
 import PriceGroupList from '@/components/PriceGroupList';
@@ -90,11 +90,12 @@ export default async function HomePage() {
     );
   }
 
-  const [priceGroups, announcements, accessStatus, canSendToFactory] = await Promise.all([
+  const [priceGroups, announcements, accessStatus, factoryAccess, receiveGoods] = await Promise.all([
     getUserPriceGroups(session.user.id),
     getActiveAnnouncements(),
     getUserAccessStatus(session.user.id),
-    isApprovedCustomer(session.user.id),
+    getFactoryHomeAccess(session.user.id),
+    canReceiveGoods(session.user.id),
   ]);
 
   return (
@@ -102,7 +103,39 @@ export default async function HomePage() {
       <IOSInstallPrompt />
       <NotificationPrompt />
       <AnnouncementPopup />
-      {/* Map Button - Always first for approved users */}
+      {(factoryAccess.view || receiveGoods) && (
+        <section className={`mb-8 grid gap-3 ${factoryAccess.view && receiveGoods ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {factoryAccess.view && (
+            <Link
+              href="/direct-to-factory"
+              className="flex flex-col justify-center gap-2 min-h-11 p-4 bg-white rounded-lg hover:bg-green-50 transition-colors cursor-pointer border border-green-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            >
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Factory className="w-5 h-5 text-green-600" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900">ส่งตรงเข้าโรงงาน</p>
+                <p className="text-sm text-gray-600">ดูรายการที่แจ้งไว้</p>
+              </div>
+            </Link>
+          )}
+          {receiveGoods && (
+            <Link
+              href="/receive-goods"
+              className="flex flex-col justify-center gap-2 min-h-11 p-4 bg-white rounded-lg hover:bg-green-50 transition-colors cursor-pointer border border-green-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            >
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Plus className="w-5 h-5 text-green-600" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900">แจ้งรับสินค้า</p>
+                <p className="text-sm text-gray-600">กรอกแบบฟอร์ม</p>
+              </div>
+            </Link>
+          )}
+        </section>
+      )}
+
       {accessStatus.hasAccess && (
         <section className="mb-8">
           <Link
@@ -116,26 +149,6 @@ export default async function HomePage() {
               <div>
                 <p className="font-medium text-gray-900">แผนที่ร้าน</p>
                 <p className="text-sm text-gray-500">ข้อมูลตำแหน่งและแผนที่</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-        </section>
-      )}
-
-      {canSendToFactory && (
-        <section className="mb-8">
-          <Link
-            href="/direct-to-factory"
-            className="flex items-center justify-between p-4 bg-white rounded-lg hover:bg-green-50 transition cursor-pointer border border-green-200 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Factory className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">ส่งตรงเข้าโรงงาน</p>
-                <p className="text-sm text-gray-500">แจ้งส่งสินค้าและดาวน์โหลดเอกสารเข้าโรงงาน</p>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />

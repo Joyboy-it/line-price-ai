@@ -39,6 +39,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
       set('is_active', body.is_active);
     }
+    if (body?.form_id !== undefined) {
+      if (body.form_id !== null && !isUuid(body.form_id)) {
+        return NextResponse.json({ error: 'แบบฟอร์มไม่ถูกต้อง' }, { status: 400 });
+      }
+      if (body.form_id) {
+        const form = await queryOne<{ id: string }>('SELECT id FROM factory_forms WHERE id = $1', [body.form_id]);
+        if (!form) return NextResponse.json({ error: 'ไม่พบแบบฟอร์ม' }, { status: 400 });
+      }
+      set('form_id', body.form_id);
+    }
     if (sets.length === 0) {
       return NextResponse.json({ error: 'ไม่มีข้อมูลที่จะแก้ไข' }, { status: 400 });
     }

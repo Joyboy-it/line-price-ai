@@ -72,6 +72,7 @@ export interface CustomerOrderView {
   status: OrderStatus;
   status_label: string;
   can_edit: boolean;
+  can_cancel: boolean;
   files: CustomerOrderFile[];
   created_at: string;
   updated_at: string;

@@ -46,10 +46,60 @@ export async function listCustomerOrders(userId: string): Promise<FactoryOrderRe
   return query<FactoryOrderRecord>(`${ORDER_SELECT} WHERE o.user_id = $1 ORDER BY o.created_at DESC LIMIT 200`, [userId]);
 }
 
+export async function listOpenCustomerOrders(userId: string): Promise<FactoryOrderRecord[]> {
+  return query<FactoryOrderRecord>(
+    `${ORDER_SELECT} WHERE o.user_id = $1 AND o.status NOT IN ('completed', 'cancelled') ORDER BY o.created_at DESC LIMIT 200`,
+    [userId]
+  );
+}
+
+export const CUSTOMER_HISTORY_PAGE_SIZE = 20;
+
+export async function countCustomerHistory(userId: string, status: 'completed' | 'cancelled'): Promise<number> {
+  const row = await queryOne<{ count: string }>(
+    'SELECT COUNT(*) AS count FROM factory_orders WHERE user_id = $1 AND status = $2',
+    [userId, status]
+  );
+  return parseInt(row?.count || '0', 10);
+}
+
+export async function listCustomerHistory(
+  userId: string,
+  status: 'completed' | 'cancelled',
+  page: number
+): Promise<FactoryOrderRecord[]> {
+  const offset = (Math.max(page, 1) - 1) * CUSTOMER_HISTORY_PAGE_SIZE;
+  return query<FactoryOrderRecord>(
+    `${ORDER_SELECT} WHERE o.user_id = $1 AND o.status = $2 ORDER BY o.created_at DESC LIMIT ${CUSTOMER_HISTORY_PAGE_SIZE} OFFSET ${offset}`,
+    [userId, status]
+  );
+}
+
 export async function getOrderFiles(orderId: string): Promise<FactoryOrderFileRecord[]> {
   return query<FactoryOrderFileRecord>(
     `SELECT id, kind, file_name, file_path, mime_type, file_size, ${iso('created_at')} AS created_at
      FROM factory_order_files WHERE order_id = $1 ORDER BY created_at`,
+    [orderId]
+  );
+}
+
+export interface FactoryOrderActivity {
+  id: string;
+  action: string;
+  details: Record<string, unknown> | null;
+  created_at: string;
+  user_name: string | null;
+}
+
+export async function listOrderActivity(orderId: string): Promise<FactoryOrderActivity[]> {
+  return query<FactoryOrderActivity>(
+    `SELECT ul.id, ul.action, ul.details,
+            ${iso('ul.created_at')} AS created_at,
+            u.name AS user_name
+     FROM user_logs ul
+     LEFT JOIN users u ON u.id = ul.user_id
+     WHERE ul.entity_type = 'factory_order' AND ul.entity_id = $1
+     ORDER BY ul.created_at DESC`,
     [orderId]
   );
 }
@@ -65,7 +115,7 @@ export interface StaffOrderFilters {
 
 export const STAFF_PAGE_SIZE = 20;
 
-export async function listStaffOrders(filters: StaffOrderFilters): Promise<{ orders: FactoryOrderRecord[]; total: number }> {
+function staffOrderWhere(filters: StaffOrderFilters, includeStatus: boolean): { where: string; params: unknown[] } {
   const conditions: string[] = [];
   const params: unknown[] = [];
   const add = (sql: string, value: unknown) => {
@@ -73,16 +123,45 @@ export async function listStaffOrders(filters: StaffOrderFilters): Promise<{ ord
     conditions.push(sql.replace('?', `$${params.length}`));
   };
 
-  if (filters.status) add('o.status = ?', filters.status);
-  if (filters.from) add('o.delivery_date >= ?::date', filters.from);
-  if (filters.to) add('o.delivery_date <= ?::date', filters.to);
+  if (includeStatus && filters.status) add('o.status = ?', filters.status);
+  if (filters.from || filters.to) {
+    const dateParts: string[] = [];
+    if (filters.from) {
+      params.push(filters.from);
+      dateParts.push(`o.delivery_date >= $${params.length}::date`);
+    }
+    if (filters.to) {
+      params.push(filters.to);
+      dateParts.push(`o.delivery_date <= $${params.length}::date`);
+    }
+    conditions.push(`(o.status NOT IN ('completed', 'cancelled') OR (${dateParts.join(' AND ')}))`);
+  }
   if (filters.factoryId) add('o.factory_id = ?', filters.factoryId);
   if (filters.q) {
     params.push(`%${filters.q}%`);
     conditions.push(`(u.name ILIKE $${params.length} OR o.license_plate ILIKE $${params.length})`);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', params };
+}
+
+export async function countStaffOrdersByStatus(
+  filters: StaffOrderFilters
+): Promise<Partial<Record<OrderStatus, number>>> {
+  const { where, params } = staffOrderWhere(filters, false);
+  const rows = await query<{ status: OrderStatus; count: string }>(
+    `SELECT o.status, COUNT(*)::text AS count
+     FROM factory_orders o
+     JOIN users u ON u.id = o.user_id
+     ${where}
+     GROUP BY o.status`,
+    params
+  );
+  return Object.fromEntries(rows.map((row) => [row.status, parseInt(row.count, 10)]));
+}
+
+export async function listStaffOrders(filters: StaffOrderFilters): Promise<{ orders: FactoryOrderRecord[]; total: number }> {
+  const { where, params } = staffOrderWhere(filters, true);
   const offset = (Math.max(filters.page, 1) - 1) * STAFF_PAGE_SIZE;
 
   const [orders, count] = await Promise.all([
@@ -100,6 +179,7 @@ export async function listStaffOrders(filters: StaffOrderFilters): Promise<{ ord
 }
 
 const CUSTOMER_EDITABLE = `confirmed_date IS NULL AND status NOT IN ('cancelled', 'completed')`;
+const CUSTOMER_CANCELLABLE = `confirmed_date IS NULL AND status = 'customer_submitted'`;
 
 export async function insertCustomerOrder(
   userId: string,
@@ -151,9 +231,19 @@ export async function updateCustomerOrder(
 export async function cancelCustomerOrder(orderId: string, userId: string): Promise<boolean> {
   const row = await queryOne<{ id: string }>(
     `UPDATE factory_orders SET status = 'cancelled', cancelled_at = NOW()
-     WHERE id = $1 AND user_id = $2 AND ${CUSTOMER_EDITABLE}
+     WHERE id = $1 AND user_id = $2 AND ${CUSTOMER_CANCELLABLE}
      RETURNING id`,
     [orderId, userId]
+  );
+  return row !== null;
+}
+
+export async function cancelStaffOrder(orderId: string, staffUserId: string): Promise<boolean> {
+  const row = await queryOne<{ id: string }>(
+    `UPDATE factory_orders SET status = 'cancelled', cancelled_at = NOW(), updated_by = $2
+     WHERE id = $1 AND status <> 'cancelled'
+     RETURNING id`,
+    [orderId, staffUserId]
   );
   return row !== null;
 }
@@ -173,12 +263,15 @@ export interface OfferForSelection extends OfferCandidate {
 export async function getOffersForProduct(productId: string): Promise<OfferForSelection[]> {
   return query<OfferForSelection>(
     `SELECT ao.id AS "offerId", ao.agent_id AS "agentId", a.name AS "agentName",
-       a.sort_order AS "agentSortOrder", ao.price::float8 AS price, ao.price::text AS "priceText",
+       ao.sheet_order AS "sheetOrder", ao.price::float8 AS price, ao.price::text AS "priceText",
        (ao.is_active AND a.is_active) AS "isActive",
        ao.po_number AS "poNumber", ao.delivery_note_number AS "deliveryNoteNumber",
-       ao.form_file_path AS "formFilePath", ao.form_file_name AS "formFileName", ao.form_mime_type AS "formMimeType"
+       COALESCE(ff.file_path, ao.form_file_path) AS "formFilePath",
+       COALESCE(ff.file_name, ao.form_file_name) AS "formFileName",
+       COALESCE(ff.mime_type, ao.form_mime_type) AS "formMimeType"
      FROM agent_offers ao
      JOIN agents a ON a.id = ao.agent_id
+     LEFT JOIN factory_forms ff ON ff.id = ao.form_id
      WHERE ao.product_id = $1
      ORDER BY a.sort_order, a.name`,
     [productId]
@@ -252,8 +345,8 @@ export async function isProductAvailable(factoryId: string, productId: string): 
 
 // ---------- Settings ----------
 
-export interface FactoryRow { id: string; name: string; is_active: boolean; sort_order: number }
-export interface AgentRow { id: string; name: string; is_active: boolean; sort_order: number }
+export interface FactoryRow { id: string; name: string; is_active: boolean; sort_order: number; updated_at: string }
+export interface AgentRow { id: string; name: string; is_active: boolean; sort_order: number; updated_at: string }
 export interface OfferRow {
   id: string;
   factory_id: string;
@@ -263,36 +356,67 @@ export interface OfferRow {
   agent_id: string;
   agent_name: string;
   agent_sort_order: number;
+  sheet_order: number;
   price: string;
   po_number: string | null;
   delivery_note_number: string | null;
+  form_id: string | null;
+  form_name: string | null;
   form_file_name: string | null;
   is_active: boolean;
   updated_at: string;
 }
 
+export interface FactoryFormRow {
+  id: string;
+  name: string;
+  file_name: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
 export async function listFactories(): Promise<FactoryRow[]> {
-  return query<FactoryRow>(`SELECT id, name, is_active, sort_order FROM factories ORDER BY sort_order, name`);
+  return query<FactoryRow>(
+    `SELECT id, name, is_active, sort_order, ${iso('updated_at')} AS updated_at FROM factories ORDER BY sort_order, name`
+  );
 }
 
 export async function listAgents(): Promise<AgentRow[]> {
-  return query<AgentRow>(`SELECT id, name, is_active, sort_order FROM agents ORDER BY sort_order, name`);
+  return query<AgentRow>(
+    `SELECT id, name, is_active, sort_order, ${iso('updated_at')} AS updated_at FROM agents ORDER BY sort_order, name`
+  );
 }
 
 export async function listOffers(factoryId?: string): Promise<OfferRow[]> {
   return query<OfferRow>(
     `SELECT ao.id, f.id AS factory_id, f.name AS factory_name, p.id AS product_id, p.name AS product_name,
-       a.id AS agent_id, a.name AS agent_name, a.sort_order AS agent_sort_order,
-       ao.price::text AS price, ao.po_number, ao.delivery_note_number, ao.form_file_name,
+       a.id AS agent_id, a.name AS agent_name, a.sort_order AS agent_sort_order, ao.sheet_order,
+       ao.price::text AS price, ao.po_number, ao.delivery_note_number,
+       ao.form_id, ff.name AS form_name, COALESCE(ff.file_name, ao.form_file_name) AS form_file_name,
        ao.is_active, ${iso('ao.updated_at')} AS updated_at
      FROM agent_offers ao
      JOIN factory_products p ON p.id = ao.product_id
      JOIN factories f ON f.id = p.factory_id
      JOIN agents a ON a.id = ao.agent_id
+     LEFT JOIN factory_forms ff ON ff.id = ao.form_id
      ${factoryId ? 'WHERE f.id = $1' : ''}
      ORDER BY f.sort_order, f.name, p.name, a.sort_order, a.name`,
     factoryId ? [factoryId] : []
   );
+}
+
+export async function listFactoryForms(): Promise<FactoryFormRow[]> {
+  return query<FactoryFormRow>(
+    `SELECT id, name, file_name, is_active, ${iso('updated_at')} AS updated_at
+     FROM factory_forms ORDER BY name`
+  );
+}
+
+export async function findMissingFormNames(names: string[]): Promise<string[]> {
+  if (names.length === 0) return [];
+  const rows = await query<{ name: string }>('SELECT name FROM factory_forms WHERE name = ANY($1::text[])', [names]);
+  const found = new Set(rows.map((row) => row.name));
+  return names.filter((name) => !found.has(name));
 }
 
 async function upsertFactory(client: PoolClient, name: string): Promise<string> {
@@ -330,20 +454,40 @@ async function upsertAgent(client: PoolClient, name: string): Promise<string> {
 /** Creates or updates one offer. Empty PO / delivery note (null) keeps the stored value. */
 export async function upsertOffer(
   client: PoolClient,
-  input: { factoryName: string; productName: string; agentName: string; price: number; poNumber: string | null; deliveryNoteNumber: string | null }
+  input: {
+    factoryName: string;
+    productName: string;
+    agentName: string;
+    price: number;
+    poNumber: string | null;
+    deliveryNoteNumber: string | null;
+    /** null keeps the form already linked to this offer. */
+    formName: string | null;
+    /** Spreadsheet row. Omitted offers are appended and keep that place on later edits. */
+    sheetOrder?: number;
+  }
 ): Promise<{ id: string; inserted: boolean }> {
   const factoryId = await upsertFactory(client, input.factoryName);
   const productId = await upsertProduct(client, factoryId, input.productName);
   const agentId = await upsertAgent(client, input.agentName);
+  const form = input.formName
+    ? await client.query<{ id: string }>('SELECT id FROM factory_forms WHERE name = $1', [input.formName])
+    : null;
+  const explicitOrder = input.sheetOrder != null;
+  const sheetOrder = explicitOrder
+    ? input.sheetOrder
+    : (await client.query<{ n: number }>('SELECT COALESCE(MAX(sheet_order), 0) + 1 AS n FROM agent_offers')).rows[0].n;
   const result = await client.query<{ id: string; inserted: boolean }>(
-    `INSERT INTO agent_offers (product_id, agent_id, price, po_number, delivery_note_number)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO agent_offers (product_id, agent_id, price, po_number, delivery_note_number, form_id, sheet_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (product_id, agent_id) DO UPDATE SET
        price = EXCLUDED.price,
        po_number = COALESCE(EXCLUDED.po_number, agent_offers.po_number),
-       delivery_note_number = COALESCE(EXCLUDED.delivery_note_number, agent_offers.delivery_note_number)
+       delivery_note_number = COALESCE(EXCLUDED.delivery_note_number, agent_offers.delivery_note_number),
+       form_id = COALESCE(EXCLUDED.form_id, agent_offers.form_id),
+       sheet_order = CASE WHEN $8 THEN EXCLUDED.sheet_order ELSE agent_offers.sheet_order END
      RETURNING id, (xmax = 0) AS inserted`,
-    [productId, agentId, input.price, input.poNumber, input.deliveryNoteNumber]
+    [productId, agentId, input.price, input.poNumber, input.deliveryNoteNumber, form?.rows[0]?.id ?? null, sheetOrder, explicitOrder]
   );
   return result.rows[0];
 }
@@ -353,7 +497,7 @@ export async function importOffers(rows: ParsedOfferRow[]): Promise<{ created: n
     let created = 0;
     let updated = 0;
     for (const row of rows) {
-      const { inserted } = await upsertOffer(client, row);
+      const { inserted } = await upsertOffer(client, { ...row, sheetOrder: row.line });
       if (inserted) created++;
       else updated++;
     }

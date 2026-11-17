@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logActionWithIp } from '@/lib/log-helper';
 import { requireStaff } from '@/lib/direct-to-factory/customer-access';
 import { parseOfferRows } from '@/lib/direct-to-factory/import-rows';
-import { importOffers } from '@/lib/direct-to-factory/queries';
+import { findMissingFormNames, importOffers } from '@/lib/direct-to-factory/queries';
 import { readSpreadsheet } from '@/lib/direct-to-factory/read-spreadsheet';
 
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024;
@@ -35,6 +35,16 @@ export async function POST(request: NextRequest) {
     }
     if (parsed.rows.length === 0) {
       return NextResponse.json({ error: 'ไม่พบข้อมูลในไฟล์' }, { status: 400 });
+    }
+
+    const missingForms = new Set(await findMissingFormNames(
+      [...new Set(parsed.rows.flatMap((row) => (row.formName ? [row.formName] : [])))]
+    ));
+    const formErrors = parsed.rows
+      .filter((row) => row.formName && missingForms.has(row.formName))
+      .map((row) => ({ line: row.line, message: `ไม่พบแบบฟอร์มชื่อ ${row.formName}` }));
+    if (formErrors.length > 0) {
+      return NextResponse.json({ error: 'ไฟล์มีข้อผิดพลาด ยังไม่ได้บันทึกข้อมูล', errors: formErrors }, { status: 400 });
     }
 
     const result = await importOffers(parsed.rows);

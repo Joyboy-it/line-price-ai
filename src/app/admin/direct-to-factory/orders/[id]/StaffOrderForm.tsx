@@ -10,12 +10,14 @@ import { ORDER_STATUSES, ORDER_STATUS_LABELS } from '@/lib/direct-to-factory/ord
 import type { FactoryOption, OfferForSelection } from '@/lib/direct-to-factory/queries';
 import { selectBestOffer } from '@/lib/direct-to-factory/select-offer';
 import type { FactoryOrderFileRecord, FactoryOrderRecord, OrderFileKind } from '@/lib/direct-to-factory/types';
+import { sanitizePriceInput } from '@/lib/direct-to-factory/validation';
 
 interface Props {
   order: FactoryOrderRecord;
   files: FactoryOrderFileRecord[];
   initialOffers: OfferForSelection[];
   factories: (FactoryOption & { is_active: boolean })[];
+  canCancel: boolean;
 }
 
 const FILE_KIND_LABELS: Record<OrderFileKind, string> = { delivery_note: 'ใบนำส่ง', attachment: 'ไฟล์แนบอื่นๆ' };
@@ -30,7 +32,7 @@ function Field({ id, label, children, hint }: { id: string; label: string; child
   );
 }
 
-export default function StaffOrderForm({ order, files, initialOffers, factories }: Props) {
+export default function StaffOrderForm({ order, files, initialOffers, factories, canCancel }: Props) {
   const router = useRouter();
   const readOnly = order.status === 'cancelled';
 
@@ -52,6 +54,7 @@ export default function StaffOrderForm({ order, files, initialOffers, factories 
   const [uploadKind, setUploadKind] = useState<OrderFileKind>('delivery_note');
   const [uploading, setUploading] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FactoryOrderFileRecord | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const best = selectBestOffer(offers);
   const products = factories.find((f) => f.id === values.confirmed_factory_id)?.products ?? [];
@@ -107,6 +110,15 @@ export default function StaffOrderForm({ order, files, initialOffers, factories 
       setNotice({ type: 'error', text: (error as Error).message });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const cancelOrder = async () => {
+    try {
+      await fetchJson(`/api/admin/direct-to-factory/orders/${order.id}`, { method: 'DELETE' });
+      router.refresh();
+    } catch (error) {
+      setNotice({ type: 'error', text: (error as Error).message });
     }
   };
 
@@ -193,7 +205,7 @@ export default function StaffOrderForm({ order, files, initialOffers, factories 
             </select>
           </Field>
           <Field id="price" label="ราคา">
-            <input id="price" className="input tabular-nums" inputMode="decimal" value={values.price} onChange={(e) => setValues({ ...values, price: e.target.value })} />
+            <input id="price" className="input tabular-nums" inputMode="decimal" value={values.price} onChange={(e) => setValues({ ...values, price: sanitizePriceInput(e.target.value) })} />
           </Field>
           <Field id="po_number" label="เลข PO">
             <input id="po_number" className="input" value={values.po_number} onChange={(e) => setValues({ ...values, po_number: e.target.value })} />
@@ -213,10 +225,18 @@ export default function StaffOrderForm({ order, files, initialOffers, factories 
               <textarea id="staff_note" className="input" rows={3} maxLength={1000} value={values.staff_note} onChange={(e) => setValues({ ...values, staff_note: e.target.value })} />
             </Field>
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
             <button type="submit" className="btn-primary min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed" disabled={saving || readOnly}>
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
+            {canCancel && (
+              <button type="button" className="btn-danger min-h-[44px]" onClick={() => setCancelOpen(true)}>
+                ยกเลิกรายการ
+              </button>
+            )}
+            {!canCancel && !readOnly && (
+              <p className="text-sm text-gray-600">หลังมีการดำเนินการแล้ว ยกเลิกได้เฉพาะผู้ดูแลระบบ</p>
+            )}
           </div>
         </fieldset>
       </form>
@@ -278,6 +298,14 @@ export default function StaffOrderForm({ order, files, initialOffers, factories 
         onConfirm={removeFile}
         title="ลบไฟล์"
         message={`ลบไฟล์ ${fileToDelete?.file_name ?? ''} ลูกค้าจะไม่เห็นไฟล์นี้อีก`}
+      />
+      <ConfirmModal
+        isOpen={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={cancelOrder}
+        title="ยกเลิกรายการส่งตรงเข้าโรงงาน"
+        message="เมื่อยกเลิกแล้วจะแก้ไขรายการนี้ไม่ได้อีก"
+        confirmText="ยกเลิก"
       />
     </div>
   );

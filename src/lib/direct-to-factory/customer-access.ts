@@ -6,13 +6,39 @@ import { hasPermission } from '@/lib/permissions';
 import { getCustomerOrder, getOrder } from './queries';
 import type { FactoryOrderRecord } from './types';
 
-/** Same rule as the approved user list in /admin/users: an approved request and an active account. */
-export async function isApprovedCustomer(userId: string): Promise<boolean> {
+export type FactoryAccess = 'view' | 'create';
+
+const FACTORY_ACCESS_COLUMN: Record<FactoryAccess, string> = {
+  view: 'can_view_factory_orders',
+  create: 'can_create_factory_order',
+};
+
+/** Approved, active, and allowed to see the list or to open the new-order form. */
+export async function hasFactoryAccess(userId: string, access: FactoryAccess): Promise<boolean> {
+  const column = FACTORY_ACCESS_COLUMN[access];
   const row = await queryOne<{ ok: boolean }>(
     `SELECT EXISTS (
        SELECT 1 FROM users u
        JOIN access_requests ar ON ar.user_id = u.id
-       WHERE u.id = $1 AND u.is_active = true AND ar.status = 'approved'
+       WHERE u.id = $1 AND u.is_active = true AND u.${column} = true AND ar.status = 'approved'
+     ) AS ok`,
+    [userId]
+  );
+  return row?.ok === true;
+}
+
+export async function getFactoryHomeAccess(userId: string): Promise<{ view: boolean; create: boolean }> {
+  const view = await hasFactoryAccess(userId, 'view');
+  return { view, create: view };
+}
+
+/** Approved, active, and allowed to open แจ้งรับสินค้า. Separate from factory orders. */
+export async function canReceiveGoods(userId: string): Promise<boolean> {
+  const row = await queryOne<{ ok: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM users u
+       JOIN access_requests ar ON ar.user_id = u.id
+       WHERE u.id = $1 AND u.is_active = true AND u.can_receive_goods = true AND ar.status = 'approved'
      ) AS ok`,
     [userId]
   );
@@ -38,17 +64,17 @@ export async function getOrderForViewer(orderId: string): Promise<FactoryOrderRe
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   if (isStaff(session)) return getOrder(orderId);
-  if (!(await isApprovedCustomer(session.user.id))) return null;
+  if (!(await hasFactoryAccess(session.user.id, 'view'))) return null;
   return getCustomerOrder(orderId, session.user.id);
 }
 
-export async function requireCustomer(): Promise<Guard> {
+export async function requireCustomer(access: FactoryAccess): Promise<Guard> {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
-  if (!(await isApprovedCustomer(session.user.id))) {
-    return { error: NextResponse.json({ error: 'บัญชีนี้ยังไม่ได้รับอนุญาตให้แจ้งส่งตรงเข้าโรงงาน' }, { status: 403 }) };
+  if (!(await hasFactoryAccess(session.user.id, access))) {
+    return { error: NextResponse.json({ error: 'บัญชีนี้ยังไม่ได้รับอนุญาตให้ใช้ส่วนนี้' }, { status: 403 }) };
   }
   return { session };
 }

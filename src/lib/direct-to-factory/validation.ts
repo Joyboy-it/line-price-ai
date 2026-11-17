@@ -26,6 +26,16 @@ export function isPrice(value: unknown): boolean {
   return PRICE_PATTERN.test(String(value ?? '').trim());
 }
 
+/** Digits and one decimal point only, so a price field cannot keep letters. */
+export function sanitizePriceInput(value: string): string {
+  const cleaned = value.replace(/[^\d.]/g, '');
+  const dot = cleaned.indexOf('.');
+  if (dot === -1) return cleaned.slice(0, 10);
+  const whole = cleaned.slice(0, dot).slice(0, 10);
+  const fraction = cleaned.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+  return `${whole}.${fraction}`;
+}
+
 /** Trimmed text, or null when empty. Returns undefined when the value is not a string or too long. */
 export function cleanText(value: unknown, maxLength = MAX_TEXT): string | null | undefined {
   if (value === null || value === undefined) return null;

@@ -6,7 +6,7 @@ import NotApproved from '../NotApproved';
 import OrderForm from '../OrderForm';
 
 export default async function NewFactoryOrderPage() {
-  const { session, approved } = await getCustomerPageSession();
+  const { session, approved } = await getCustomerPageSession('view');
   if (!approved) return <NotApproved />;
 
   const options = await listFactoryOptions();

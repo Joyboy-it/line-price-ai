@@ -279,6 +279,20 @@ export default function UserList({
                     }`}>
                       {user.is_active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                     </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      user.can_view_factory_orders
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.can_view_factory_orders ? 'เห็นส่งตรงเข้าโรงงาน' : 'ไม่เห็นส่งตรงเข้าโรงงาน'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      user.can_receive_goods
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.can_receive_goods ? 'เห็นแจ้งรับสินค้า' : 'ไม่เห็นแจ้งรับสินค้า'}
+                    </span>
                   </div>
                   {user.shop_name && (
                     <p className="text-sm text-gray-500 mt-1 truncate">🏪 {user.shop_name}</p>
@@ -672,6 +686,8 @@ function EditUserModal({ user, onClose, canManageRoles }: { user: UserWithGroups
   const [formData, setFormData] = useState({
     role: user.role,
     is_active: user.is_active,
+    can_view_factory_orders: user.can_view_factory_orders,
+    can_receive_goods: user.can_receive_goods,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -739,6 +755,32 @@ function EditUserModal({ user, onClose, canManageRoles }: { user: UserWithGroups
             />
             <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
               เปิดใช้งาน
+            </label>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="can_view_factory_orders"
+              checked={formData.can_view_factory_orders}
+              onChange={(e) => setFormData({ ...formData, can_view_factory_orders: e.target.checked })}
+              className="w-4 h-4 text-green-500 rounded"
+            />
+            <label htmlFor="can_view_factory_orders" className="text-sm font-medium text-gray-700">
+              เห็นส่งตรงเข้าโรงงาน
+            </label>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="can_receive_goods"
+              checked={formData.can_receive_goods}
+              onChange={(e) => setFormData({ ...formData, can_receive_goods: e.target.checked })}
+              className="w-4 h-4 text-green-500 rounded"
+            />
+            <label htmlFor="can_receive_goods" className="text-sm font-medium text-gray-700">
+              เห็นแจ้งรับสินค้า
             </label>
           </div>
 

@@ -8,7 +8,7 @@ import { isUuid } from '@/lib/direct-to-factory/validation';
 import CancelOrderButton from '../CancelOrderButton';
 import { getCustomerPageSession } from '../customer-page';
 import NotApproved from '../NotApproved';
-import StatusBadge from '../StatusBadge';
+import StatusStepper from '../StatusStepper';
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -22,7 +22,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 const FILE_KIND_LABELS = { delivery_note: 'ใบนำส่ง', attachment: 'ไฟล์แนบ' } as const;
 
 export default async function FactoryOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { session, approved } = await getCustomerPageSession();
+  const { session, approved } = await getCustomerPageSession('view');
   if (!approved) return <NotApproved />;
 
   const { id } = await params;
@@ -39,10 +39,8 @@ export default async function FactoryOrderDetailPage({ params }: { params: Promi
         กลับไปรายการ
       </Link>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-gray-800">{order.product_name}</h1>
-        <StatusBadge status={order.status} />
-      </div>
+      <h1 className="text-2xl font-bold text-gray-800">{order.product_name}</h1>
+      <StatusStepper status={order.status} />
       <p className="text-sm text-gray-500">แจ้งเมื่อ {formatThaiDateTime(order.created_at)}</p>
 
       <section className="card p-4 sm:p-6">
@@ -66,13 +64,15 @@ export default async function FactoryOrderDetailPage({ params }: { params: Promi
           <Row label="ทะเบียนรถ" value={order.license_plate} />
           <Row label="หมายเหตุ" value={order.customer_note} />
         </dl>
-        {order.can_edit && (
+        {(order.can_edit || order.can_cancel) && (
           <div className="flex flex-wrap gap-3 mt-4">
-            <Link href={`/direct-to-factory/${order.id}/edit`} className="btn-secondary inline-flex items-center gap-2 min-h-[44px]">
-              <Pencil className="w-4 h-4" />
-              แก้ไข
-            </Link>
-            <CancelOrderButton orderId={order.id} />
+            {order.can_edit && (
+              <Link href={`/direct-to-factory/${order.id}/edit`} className="btn-secondary inline-flex items-center gap-2 min-h-[44px]">
+                <Pencil className="w-4 h-4" />
+                แก้ไข
+              </Link>
+            )}
+            {order.can_cancel && <CancelOrderButton orderId={order.id} />}
           </div>
         )}
       </section>

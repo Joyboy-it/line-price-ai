@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { logActionWithIp } from '@/lib/log-helper';
 import { requireStaff } from '@/lib/direct-to-factory/customer-access';
-import { isOrderStatus } from '@/lib/direct-to-factory/order-rules';
-import { getOffersForProduct, getOrder, getOrderFiles } from '@/lib/direct-to-factory/queries';
+import { canStaffCancel, isOrderStatus } from '@/lib/direct-to-factory/order-rules';
+import { cancelStaffOrder, getOffersForProduct, getOrder, getOrderFiles } from '@/lib/direct-to-factory/queries';
 import { cleanText, isIsoDate, isPrice, isTime, isUuid } from '@/lib/direct-to-factory/validation';
 
 type Params = { params: Promise<{ id: string }> };
@@ -138,6 +138,34 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ order: await getOrder(id), files: await getOrderFiles(id) });
   } catch (error) {
     console.error('Error updating staff order:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Params) {
+  const guard = await requireStaff();
+  if (guard.error) return guard.error;
+
+  const { id } = await params;
+  if (!isUuid(id)) return NOT_FOUND();
+
+  try {
+    const existing = await getOrder(id);
+    if (!existing) return NOT_FOUND();
+    if (!canStaffCancel(guard.session.user.role, existing)) {
+      const message = existing.status === 'cancelled'
+        ? 'รายการนี้ถูกยกเลิกแล้ว'
+        : 'หลังมีการดำเนินการแล้ว ยกเลิกได้เฉพาะผู้ดูแลระบบ';
+      return NextResponse.json({ error: message }, { status: existing.status === 'cancelled' ? 409 : 403 });
+    }
+    if (!(await cancelStaffOrder(id, guard.session.user.id))) {
+      return NextResponse.json({ error: 'รายการนี้ถูกยกเลิกแล้ว' }, { status: 409 });
+    }
+
+    await logActionWithIp(request, guard.session.user.id, 'cancel_factory_order', 'factory_order', id, { by: 'staff' });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error cancelling staff order:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

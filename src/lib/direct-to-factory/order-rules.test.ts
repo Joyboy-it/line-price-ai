@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
+  canCustomerCancel,
   canCustomerEdit,
+  canStaffCancel,
   toCustomerView,
 } from '@/lib/direct-to-factory/order-rules';
 import type { FactoryOrderRecord } from '@/lib/direct-to-factory/types';
@@ -72,6 +74,28 @@ describe('canCustomerEdit', () => {
   });
 });
 
+describe('cancelling an order', () => {
+  it('lets the customer cancel only an untouched submission', () => {
+    expect(canCustomerCancel(order())).toBe(true);
+    expect(canCustomerCancel(order({ status: 'pending' }))).toBe(false);
+    expect(canCustomerCancel(order({ confirmed_date: '2026-11-13' }))).toBe(false);
+    expect(canCustomerCancel(order({ status: 'completed' }))).toBe(false);
+  });
+
+  it('lets only an admin cancel after staff has started processing', () => {
+    const processed = order({ status: 'pending' });
+    expect(canStaffCancel('admin', processed)).toBe(true);
+    expect(canStaffCancel('admin', order({ status: 'completed', confirmed_date: '2026-11-13' }))).toBe(true);
+    expect(canStaffCancel('operator', processed)).toBe(false);
+    expect(canStaffCancel('operator', order({ confirmed_date: '2026-11-13' }))).toBe(false);
+  });
+
+  it('lets an operator cancel before anyone processes the order', () => {
+    expect(canStaffCancel('operator', order())).toBe(true);
+    expect(canStaffCancel('admin', order({ status: 'cancelled' }))).toBe(false);
+  });
+});
+
 describe('toCustomerView', () => {
   it('never exposes price, agent, PO or delivery note numbers', () => {
     const view = toCustomerView(order(), []);
@@ -99,6 +123,7 @@ describe('toCustomerView', () => {
       status: 'customer_submitted',
       status_label: 'ลูกค้าแจ้ง',
       can_edit: true,
+      can_cancel: true,
     });
   });
 
@@ -108,7 +133,7 @@ describe('toCustomerView', () => {
       [{ id: 'file-1', kind: 'delivery_note', file_name: 'ใบนำส่ง.pdf', file_path: '/direct-to-factory/x.pdf', mime_type: 'application/pdf', file_size: 100, created_at: '2026-11-11T06:00:00.000Z' }]
     );
 
-    expect(view).toMatchObject({ confirmed_date: '2026-11-13', delivery_time: '08:30', staff_note: 'เข้าประตู 2', can_edit: false });
+    expect(view).toMatchObject({ confirmed_date: '2026-11-13', delivery_time: '08:30', staff_note: 'เข้าประตู 2', can_edit: false, can_cancel: false });
     expect(view.files).toEqual([{ id: 'file-1', kind: 'delivery_note', file_name: 'ใบนำส่ง.pdf', created_at: '2026-11-11T06:00:00.000Z' }]);
   });
 });

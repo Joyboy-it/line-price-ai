@@ -12,6 +12,16 @@ export function formatThaiDate(value: string | null): string {
   });
 }
 
+/** Calendar date in Bangkok, as YYYY-MM-DD. */
+export function bangkokDate(value: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(value);
+}
+
 export function formatThaiDateTime(value: string): string {
   return new Date(value).toLocaleString('th-TH', {
     timeZone: 'Asia/Bangkok',

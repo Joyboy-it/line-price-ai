@@ -30,7 +30,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 const adminNavLinks: { href: string; label: string; icon: typeof Settings; permission?: Permission }[] = [
   { href: '/admin', label: 'Admin', icon: Settings },
   { href: '/admin/direct-to-factory', label: 'ส่งตรงเข้าโรงงาน', icon: Factory, permission: 'manage_factory_orders' },
-  { href: '/admin/shipment-notice', label: 'แจ้งส่งสินค้า', icon: Truck },
+  { href: '/admin/shipment-notice', label: 'แจ้งรับสินค้า', icon: Truck, permission: 'manage_factory_orders' },
 ];
 
 function isNavLinkActive(pathname: string, href: string): boolean {

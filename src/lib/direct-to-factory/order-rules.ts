@@ -23,6 +23,23 @@ export function canCustomerEdit(order: Pick<FactoryOrderRecord, 'confirmed_date'
   return order.confirmed_date === null && order.status !== 'cancelled' && order.status !== 'completed';
 }
 
+/** Staff has moved the order past the customer's original submission. */
+export function orderWasProcessed(order: Pick<FactoryOrderRecord, 'confirmed_date' | 'status'>): boolean {
+  return order.confirmed_date !== null || order.status === 'pending' || order.status === 'updated' || order.status === 'completed';
+}
+
+/** Customers may cancel only before staff starts processing the order. */
+export function canCustomerCancel(order: Pick<FactoryOrderRecord, 'confirmed_date' | 'status'>): boolean {
+  return order.status === 'customer_submitted' && order.confirmed_date === null;
+}
+
+/** After processing, only an admin may cancel. Operators may cancel an untouched submission. */
+export function canStaffCancel(role: string, order: Pick<FactoryOrderRecord, 'confirmed_date' | 'status'>): boolean {
+  if (order.status === 'cancelled') return false;
+  if (role === 'admin') return true;
+  return role === 'operator' && !orderWasProcessed(order);
+}
+
 /**
  * The only shape that may leave the server on customer routes.
  * Price, agent, PO and delivery note numbers are back-office data.
@@ -47,6 +64,7 @@ export function toCustomerView(order: FactoryOrderRecord, files: FactoryOrderFil
     status: order.status,
     status_label: ORDER_STATUS_LABELS[order.status],
     can_edit: canCustomerEdit(order),
+    can_cancel: canCustomerCancel(order),
     files: files.map((file) => ({
       id: file.id,
       kind: file.kind,

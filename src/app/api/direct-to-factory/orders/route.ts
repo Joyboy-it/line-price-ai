@@ -3,21 +3,39 @@ import { logActionWithIp } from '@/lib/log-helper';
 import { requireCustomer } from '@/lib/direct-to-factory/customer-access';
 import { toCustomerView } from '@/lib/direct-to-factory/order-rules';
 import {
+  countCustomerHistory,
+  CUSTOMER_HISTORY_PAGE_SIZE,
   getCustomerOrder,
   getOffersForProduct,
   insertCustomerOrder,
   isProductAvailable,
+  listCustomerHistory,
   listCustomerOrders,
   offerSnapshot,
 } from '@/lib/direct-to-factory/queries';
 import { selectBestOffer } from '@/lib/direct-to-factory/select-offer';
 import { parseCustomerOrderInput } from '@/lib/direct-to-factory/validation';
 
-export async function GET() {
-  const guard = await requireCustomer();
+export async function GET(request: NextRequest) {
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
+  const status = request.nextUrl.searchParams.get('status');
+  const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10) || 1);
+
   try {
+    if (status === 'completed' || status === 'cancelled') {
+      const [orders, total] = await Promise.all([
+        listCustomerHistory(guard.session.user.id, status, page),
+        countCustomerHistory(guard.session.user.id, status),
+      ]);
+      return NextResponse.json({
+        orders: orders.map((order) => toCustomerView(order, [])),
+        total,
+        page,
+        pageSize: CUSTOMER_HISTORY_PAGE_SIZE,
+      });
+    }
     const orders = await listCustomerOrders(guard.session.user.id);
     return NextResponse.json(orders.map((order) => toCustomerView(order, [])));
   } catch (error) {
@@ -27,7 +45,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = await requireCustomer();
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
   try {

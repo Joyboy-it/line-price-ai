@@ -8,6 +8,8 @@ export interface ParsedOfferRow {
   poNumber: string | null;
   /** null = keep the value already stored */
   deliveryNoteNumber: string | null;
+  /** null = keep the form already linked */
+  formName: string | null;
 }
 
 export interface ImportRowError {
@@ -15,14 +17,43 @@ export interface ImportRowError {
   message: string;
 }
 
+export const OFFER_SHEET_HEADERS = ['โรงงานปลายทาง', 'สินค้า', 'ชื่อตัวแทน', 'ราคาล่าสุด', 'เลข PO', 'เลขใบนำส่ง', 'ชื่อแบบฟอร์ม'] as const;
+
 const COLUMNS = {
-  factoryName: 'โรงงานปลายทาง',
-  productName: 'สินค้า',
-  agentName: 'ชื่อตัวแทน',
-  price: 'ราคาล่าสุด',
-  poNumber: 'เลข PO',
-  deliveryNoteNumber: 'เลขใบนำส่ง',
+  factoryName: OFFER_SHEET_HEADERS[0],
+  productName: OFFER_SHEET_HEADERS[1],
+  agentName: OFFER_SHEET_HEADERS[2],
+  price: OFFER_SHEET_HEADERS[3],
+  poNumber: OFFER_SHEET_HEADERS[4],
+  deliveryNoteNumber: OFFER_SHEET_HEADERS[5],
+  formName: OFFER_SHEET_HEADERS[6],
 } as const;
+
+export interface OfferSheetSource {
+  factoryName: string;
+  productName: string;
+  agentName: string;
+  price: string;
+  poNumber: string | null;
+  deliveryNoteNumber: string | null;
+  formName: string | null;
+}
+
+/** Header plus one row per offer. Blank PO or delivery note stays blank so a re-import keeps the stored value. */
+export function offerSheetRows(offers: OfferSheetSource[]): string[][] {
+  return [
+    [...OFFER_SHEET_HEADERS],
+    ...offers.map((offer) => [
+      offer.factoryName,
+      offer.productName,
+      offer.agentName,
+      offer.price,
+      offer.poNumber ?? '',
+      offer.deliveryNoteNumber ?? '',
+      offer.formName ?? '',
+    ]),
+  ];
+}
 
 const REQUIRED: (keyof typeof COLUMNS)[] = ['factoryName', 'productName', 'agentName', 'price'];
 
@@ -83,6 +114,7 @@ export function parseOfferRows(rows: string[][]): { rows: ParsedOfferRow[]; erro
       price: Number(normalizedPrice),
       poNumber: cell('poNumber') || null,
       deliveryNoteNumber: cell('deliveryNoteNumber') || null,
+      formName: cell('formName') || null,
     });
   });
 

@@ -1,35 +1,53 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Download, FileSpreadsheet, Plus, Upload } from 'lucide-react';
-import { fetchJson, type ApiError } from '@/lib/direct-to-factory/fetch-json';
+import { Download, Pencil, Plus, Upload, X } from 'lucide-react';
+import { OFFERS_CHANGED_EVENT } from '@/app/admin/direct-to-factory/DirectToFactoryTabs';
+import { fetchJson } from '@/lib/direct-to-factory/fetch-json';
+import { formatThaiDateTime } from '@/lib/direct-to-factory/format';
 import { ORDER_FILE_ACCEPT } from '@/lib/direct-to-factory/files-accept';
-import type { AgentRow, FactoryRow, OfferRow } from '@/lib/direct-to-factory/queries';
+import type { AgentRow, FactoryFormRow, FactoryRow, OfferRow } from '@/lib/direct-to-factory/queries';
+import { sanitizePriceInput } from '@/lib/direct-to-factory/validation';
 
 type Notice = { type: 'success' | 'error'; text: string; details?: string[] } | null;
 
-function NoticeBox({ notice }: { notice: Notice }) {
+const iconButton =
+  'inline-flex items-center justify-center h-11 w-11 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+const textButton =
+  'inline-flex items-center justify-center h-11 px-3 rounded-lg text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer';
+
+function NoticeBox({ notice, onClose }: { notice: Notice; onClose: () => void }) {
+  useEffect(() => {
+    if (!notice || notice.type !== 'success') return;
+    const timer = window.setTimeout(onClose, 2500);
+    return () => window.clearTimeout(timer);
+  }, [notice, onClose]);
+
   if (!notice) return null;
   const styles = notice.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200';
   return (
-    <div role={notice.type === 'error' ? 'alert' : 'status'} className={`border rounded-lg px-4 py-3 text-sm ${styles}`}>
-      <p>{notice.text}</p>
-      {notice.details && notice.details.length > 0 && (
-        <ul className="mt-2 list-disc pl-5 space-y-1 max-h-48 overflow-y-auto">
-          {notice.details.map((detail) => (
-            <li key={detail}>{detail}</li>
-          ))}
-        </ul>
-      )}
+    <div className="fixed top-4 inset-x-0 z-[60] flex justify-center px-4 pointer-events-none">
+      <div role={notice.type === 'error' ? 'alert' : 'status'} className={`pointer-events-auto w-full max-w-md border rounded-xl shadow-lg px-4 py-3 text-sm ${styles}`}>
+        <div className="flex items-start justify-between gap-3">
+          <p className="pt-2">{notice.text}</p>
+          <button
+            type="button"
+            className="shrink-0 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-white/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            aria-label="ปิด"
+            onClick={onClose}
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+        {notice.details && notice.details.length > 0 && (
+          <ul className="mt-2 list-disc pl-5 space-y-1 max-h-48 overflow-y-auto">
+            {notice.details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
-  );
-}
-
-function ActiveBadge({ active }: { active: boolean }) {
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-      {active ? 'เปิดใช้' : 'ปิดใช้'}
-    </span>
   );
 }
 
@@ -39,29 +57,59 @@ function NamedRow({
   onToggle,
   extra,
 }: {
-  row: { id: string; name: string; is_active: boolean };
+  row: { id: string; name: string; is_active: boolean; updated_at: string };
   onRename: (name: string) => Promise<void>;
   onToggle: () => Promise<void>;
   extra?: React.ReactNode;
 }) {
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(row.name);
-  const dirty = name.trim() !== row.name;
+
+  if (editing) {
+    return (
+      <li>
+        <form
+          className="flex items-center gap-2 py-1"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!name.trim() || name.trim() === row.name) {
+              setEditing(false);
+              return;
+            }
+            await onRename(name);
+            setEditing(false);
+          }}
+        >
+          <input className="input min-w-0" value={name} aria-label={`ชื่อ ${row.name}`} autoFocus onChange={(e) => setName(e.target.value)} />
+          <button type="submit" className="btn-primary text-sm shrink-0 disabled:opacity-50" disabled={!name.trim()}>
+            บันทึก
+          </button>
+          <button
+            type="button"
+            className="btn-secondary text-sm shrink-0"
+            onClick={() => {
+              setName(row.name);
+              setEditing(false);
+            }}
+          >
+            ยกเลิก
+          </button>
+        </form>
+      </li>
+    );
+  }
 
   return (
-    <li className="flex flex-wrap items-center gap-2 py-2">
-      <input
-        className="input flex-1 min-w-[10rem]"
-        value={name}
-        aria-label={`ชื่อ ${row.name}`}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <ActiveBadge active={row.is_active} />
-      {dirty && (
-        <button type="button" className="btn-primary text-sm" onClick={() => onRename(name)}>
-          บันทึก
-        </button>
-      )}
-      <button type="button" className="btn-secondary text-sm" onClick={onToggle}>
+    <li className="flex items-center gap-1 py-0.5 min-w-0">
+      <span className={`flex-1 min-w-0 truncate text-sm ${row.is_active ? 'text-gray-900' : 'text-gray-500'}`}>{row.name}</span>
+      <time dateTime={row.updated_at} className="shrink-0 text-xs text-gray-500 whitespace-nowrap">
+        {formatThaiDateTime(row.updated_at)}
+      </time>
+      {!row.is_active && <span className="text-xs text-gray-500 shrink-0">ปิดใช้</span>}
+      <button type="button" className={iconButton} aria-label={`แก้ชื่อ ${row.name}`} onClick={() => setEditing(true)}>
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button type="button" className={textButton} aria-label={row.is_active ? `ปิดใช้ ${row.name}` : `เปิดใช้ ${row.name}`} onClick={onToggle}>
         {row.is_active ? 'ปิดใช้' : 'เปิดใช้'}
       </button>
       {extra}
@@ -73,31 +121,78 @@ function AddByName({ label, onAdd }: { label: string; onAdd: (name: string) => P
   const [name, setName] = useState('');
   return (
     <form
-      className="flex gap-2 mt-3"
+      className="flex gap-2 mt-2"
       onSubmit={async (e) => {
         e.preventDefault();
         if (name.trim() && (await onAdd(name))) setName('');
       }}
     >
       <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={label} aria-label={label} />
-      <button type="submit" className="btn-primary flex items-center gap-1 whitespace-nowrap disabled:opacity-50" disabled={!name.trim()}>
+      <button type="submit" className="btn-primary flex items-center gap-1 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed" disabled={!name.trim()}>
         <Plus className="w-4 h-4" /> เพิ่ม
       </button>
     </form>
   );
 }
 
-function OfferRowEditor({ offer, onSaved, onError }: { offer: OfferRow; onSaved: () => Promise<void>; onError: (message: string) => void }) {
+function OfferRowEditor({
+  offer,
+  forms,
+  onSaved,
+  onError,
+}: {
+  offer: OfferRow;
+  forms: FactoryFormRow[];
+  onSaved: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
   const [price, setPrice] = useState(offer.price);
   const [poNumber, setPoNumber] = useState(offer.po_number ?? '');
   const [deliveryNote, setDeliveryNote] = useState(offer.delivery_note_number ?? '');
+  const [active, setActive] = useState(offer.is_active);
+  const [selectedFormId, setSelectedFormId] = useState(offer.form_id ?? '');
   const [busy, setBusy] = useState(false);
-  const dirty = price !== offer.price || poNumber !== (offer.po_number ?? '') || deliveryNote !== (offer.delivery_note_number ?? '');
 
-  const run = async (action: () => Promise<unknown>) => {
+  const label = `${offer.product_name} ตัวแทน ${offer.agent_name}`;
+  const dirty =
+    price !== offer.price ||
+    poNumber !== (offer.po_number ?? '') ||
+    deliveryNote !== (offer.delivery_note_number ?? '') ||
+    active !== offer.is_active ||
+    selectedFormId !== (offer.form_id ?? '');
+
+  const cancel = () => {
+    setPrice(offer.price);
+    setPoNumber(offer.po_number ?? '');
+    setDeliveryNote(offer.delivery_note_number ?? '');
+    setActive(offer.is_active);
+    setSelectedFormId(offer.form_id ?? '');
+    setEditing(false);
+  };
+
+  const save = async () => {
     setBusy(true);
     try {
-      await action();
+      const fieldsChanged =
+        price !== offer.price ||
+        poNumber !== (offer.po_number ?? '') ||
+        deliveryNote !== (offer.delivery_note_number ?? '') ||
+        active !== offer.is_active ||
+        selectedFormId !== (offer.form_id ?? '');
+      if (fieldsChanged) {
+        await fetchJson(`/api/admin/direct-to-factory/offers/${offer.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            price,
+            po_number: poNumber,
+            delivery_note_number: deliveryNote,
+            is_active: active,
+            form_id: selectedFormId || null,
+          }),
+        });
+      }
+      setEditing(false);
       await onSaved();
     } catch (error) {
       onError((error as Error).message);
@@ -106,88 +201,94 @@ function OfferRowEditor({ offer, onSaved, onError }: { offer: OfferRow; onSaved:
     }
   };
 
-  const save = () =>
-    run(() =>
-      fetchJson(`/api/admin/direct-to-factory/offers/${offer.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ price, po_number: poNumber, delivery_note_number: deliveryNote }),
-      })
+  const formId = `offer-edit-${offer.id}`;
+  const cell = 'px-3 py-2 align-middle';
+  const field = 'input py-1 px-2';
+
+  if (editing) {
+    return (
+      <tr className="bg-gray-50">
+        <td className={cell}>
+          {offer.factory_name}
+          <form
+            id={formId}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (dirty) save();
+            }}
+          />
+        </td>
+        <td className={cell}>{offer.product_name}</td>
+        <td className={cell}>{offer.agent_name}</td>
+        <td className={cell}>
+          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={price} aria-label={`ราคา ${label}`} onChange={(e) => setPrice(sanitizePriceInput(e.target.value))} />
+        </td>
+        <td className={cell}>
+          <input form={formId} className={field} value={poNumber} aria-label={`เลข PO ${label}`} onChange={(e) => setPoNumber(e.target.value)} />
+        </td>
+        <td className={cell}>
+          <input form={formId} className={field} value={deliveryNote} aria-label={`เลขใบนำส่ง ${label}`} onChange={(e) => setDeliveryNote(e.target.value)} />
+        </td>
+        <td className={cell}>
+          <select form={formId} className={field} aria-label={`แบบฟอร์ม ${label}`} value={selectedFormId} onChange={(e) => setSelectedFormId(e.target.value)}>
+            <option value="">ไม่ระบุ</option>
+            {forms.map((form) => (
+              <option key={form.id} value={form.id}>{form.name}{form.is_active ? '' : ' (ปิดใช้)'}</option>
+            ))}
+          </select>
+        </td>
+        <td className={cell}>
+          <label className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700 min-h-11">
+            <input form={formId} type="checkbox" className="h-4 w-4 accent-green-600" checked={active} onChange={(e) => setActive(e.target.checked)} />
+            เปิดใช้
+          </label>
+        </td>
+        <td className={`${cell} whitespace-nowrap text-gray-600`}>
+          <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
+        </td>
+        <td className={`${cell} whitespace-nowrap`}>
+          <button type="submit" form={formId} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy || !dirty}>
+            {busy ? 'กำลังบันทึก...' : 'บันทึก'}
+          </button>
+          <button type="button" className="btn-secondary text-sm ml-2" disabled={busy} onClick={cancel}>
+            ยกเลิก
+          </button>
+        </td>
+      </tr>
     );
-
-  const toggle = () =>
-    run(() =>
-      fetchJson(`/api/admin/direct-to-factory/offers/${offer.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ is_active: !offer.is_active }),
-      })
-    );
-
-  const uploadForm = (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return run(() => fetchJson(`/api/admin/direct-to-factory/offers/${offer.id}/form`, { method: 'POST', body: formData }));
-  };
-
-  const label = `${offer.product_name} ตัวแทน ${offer.agent_name}`;
+  }
 
   return (
-    <tr className={offer.is_active ? '' : 'bg-gray-50 text-gray-500'}>
-      <td className="px-3 py-2 whitespace-nowrap">{offer.factory_name}</td>
-      <td className="px-3 py-2 whitespace-nowrap">{offer.product_name}</td>
-      <td className="px-3 py-2 whitespace-nowrap">{offer.agent_name}</td>
-      <td className="px-3 py-2">
-        <input className="input w-28 tabular-nums text-right" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} aria-label={`ราคา ${label}`} />
+    <tr className={`hover:bg-gray-50 ${offer.is_active ? '' : 'text-gray-500'}`}>
+      <td className={cell}>{offer.factory_name}</td>
+      <td className={cell}>{offer.product_name}</td>
+      <td className={cell}>{offer.agent_name}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{offer.price}</td>
+      <td className={`${cell} whitespace-nowrap`}>{offer.po_number || '—'}</td>
+      <td className={`${cell} whitespace-nowrap`}>{offer.delivery_note_number || '—'}</td>
+      <td className={cell}>
+        {offer.form_id && offer.form_name ? (
+          <a
+            href={`/api/admin/direct-to-factory/forms/${offer.form_id}`}
+            className="inline-flex items-center gap-1 max-w-48 text-green-700 hover:text-green-800"
+            aria-label={`ดาวน์โหลด ${offer.form_name}`}
+            title={offer.form_name}
+          >
+            <Download className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 truncate">{offer.form_name}</span>
+          </a>
+        ) : (
+          '—'
+        )}
       </td>
-      <td className="px-3 py-2">
-        <input className="input w-32" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} aria-label={`เลข PO ${label}`} />
+      <td className={`${cell} whitespace-nowrap`}>{offer.is_active ? 'เปิดใช้' : 'ปิดใช้'}</td>
+      <td className={`${cell} whitespace-nowrap text-gray-600`}>
+        <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
       </td>
-      <td className="px-3 py-2">
-        <input className="input w-32" value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)} aria-label={`เลขใบนำส่ง ${label}`} />
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          {offer.form_file_name ? (
-            <a
-              href={`/api/admin/direct-to-factory/offers/${offer.id}/form`}
-              className="flex items-center gap-1 text-green-700 hover:text-green-800 text-sm max-w-[10rem] truncate"
-              title={offer.form_file_name}
-            >
-              <Download className="w-4 h-4 shrink-0" />
-              <span className="truncate">{offer.form_file_name}</span>
-            </a>
-          ) : (
-            <span className="text-sm text-gray-500">ยังไม่มีไฟล์</span>
-          )}
-          <label className="btn-secondary text-sm cursor-pointer flex items-center gap-1 whitespace-nowrap">
-            <Upload className="w-4 h-4" />
-            {offer.form_file_name ? 'แทนที่' : 'อัปโหลด'}
-            <input
-              type="file"
-              className="sr-only"
-              accept={ORDER_FILE_ACCEPT}
-              disabled={busy}
-              aria-label={`ไฟล์แบบฟอร์ม ${label}`}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) uploadForm(file);
-              }}
-            />
-          </label>
-        </div>
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <ActiveBadge active={offer.is_active} />
-          {dirty && (
-            <button type="button" className="btn-primary text-sm disabled:opacity-50" disabled={busy} onClick={save}>
-              บันทึก
-            </button>
-          )}
-          <button type="button" className="btn-secondary text-sm disabled:opacity-50" disabled={busy} onClick={toggle}>
-            {offer.is_active ? 'ปิดใช้' : 'เปิดใช้'}
-          </button>
-        </div>
+      <td className={cell}>
+        <button type="button" className={iconButton} aria-label={`แก้ไข ${label}`} onClick={() => setEditing(true)}>
+          <Pencil className="w-4 h-4" />
+        </button>
       </td>
     </tr>
   );
@@ -195,40 +296,65 @@ function OfferRowEditor({ offer, onSaved, onError }: { offer: OfferRow; onSaved:
 
 const EMPTY_NEW_OFFER = { factory_name: '', product_name: '', agent_name: '', price: '', po_number: '', delivery_note_number: '' };
 
+const SETTINGS_TABS = [
+  { id: 'factories', label: 'โรงงาน' },
+  { id: 'agents', label: 'ตัวแทน' },
+  { id: 'forms', label: 'แบบฟอร์ม' },
+  { id: 'offers', label: 'สินค้าและราคา' },
+] as const;
+
+type SettingsTab = (typeof SETTINGS_TABS)[number]['id'];
+
 export default function SettingsClient() {
   const [factories, setFactories] = useState<FactoryRow[]>([]);
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [offers, setOffers] = useState<OfferRow[]>([]);
+  const [forms, setForms] = useState<FactoryFormRow[]>([]);
+  const [newFormName, setNewFormName] = useState('');
+  const [newFormFile, setNewFormFile] = useState<File | null>(null);
+  const [search, setSearch] = useState('');
   const [factoryFilter, setFactoryFilter] = useState('');
+  const [productFilter, setProductFilter] = useState('');
+  const [agentFilter, setAgentFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice>(null);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
   const [newOffer, setNewOffer] = useState(EMPTY_NEW_OFFER);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('offers');
 
   const reload = useCallback(async () => {
     try {
-      const query = factoryFilter ? `?factory_id=${factoryFilter}` : '';
-      const [f, a, o] = await Promise.all([
+      const [f, a, o, formRows] = await Promise.all([
         fetchJson<FactoryRow[]>('/api/admin/direct-to-factory/factories'),
         fetchJson<AgentRow[]>('/api/admin/direct-to-factory/agents'),
-        fetchJson<OfferRow[]>(`/api/admin/direct-to-factory/offers${query}`),
+        fetchJson<OfferRow[]>('/api/admin/direct-to-factory/offers'),
+        fetchJson<FactoryFormRow[]>('/api/admin/direct-to-factory/forms'),
       ]);
       setFactories(f);
       setAgents(a);
       setOffers(o);
+      setForms(formRows);
     } catch (error) {
       setNotice({ type: 'error', text: (error as Error).message });
     } finally {
       setLoading(false);
     }
-  }, [factoryFilter]);
+  }, []);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
+  useEffect(() => {
+    const onOffersChanged = () => {
+      void reload();
+    };
+    window.addEventListener(OFFERS_CHANGED_EVENT, onOffersChanged);
+    return () => window.removeEventListener(OFFERS_CHANGED_EVENT, onOffersChanged);
+  }, [reload]);
+
   const showError = (message: string) => setNotice({ type: 'error', text: message });
+  const dismissNotice = useCallback(() => setNotice(null), []);
 
   const mutate = async (url: string, init: RequestInit, success: string): Promise<boolean> => {
     try {
@@ -242,31 +368,6 @@ export default function SettingsClient() {
     }
   };
 
-  const runImport = async () => {
-    if (!importFile) return;
-    setImporting(true);
-    const formData = new FormData();
-    formData.append('file', importFile);
-    try {
-      const result = await fetchJson<{ created: number; updated: number }>('/api/admin/direct-to-factory/import', {
-        method: 'POST',
-        body: formData,
-      });
-      setNotice({ type: 'success', text: `นำเข้าสำเร็จ: เพิ่มใหม่ ${result.created} รายการ, อัปเดต ${result.updated} รายการ` });
-      setImportFile(null);
-      await reload();
-    } catch (error) {
-      const failure = error as Error & ApiError;
-      setNotice({
-        type: 'error',
-        text: failure.message,
-        details: failure.errors?.map((e) => `แถวที่ ${e.line}: ${e.message}`),
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-16" role="status" aria-label="กำลังโหลด">
@@ -275,38 +376,75 @@ export default function SettingsClient() {
     );
   }
 
+  const needle = search.trim().toLowerCase();
+  const factoryOrder = new Map(factories.map((factory, index) => [factory.id, index]));
+  const productOptions = [...offers.reduce((names, offer) => {
+    if (factoryFilter && offer.factory_id !== factoryFilter) return names;
+    names.add(offer.product_name);
+    return names;
+  }, new Set<string>())].sort((a, b) => a.localeCompare(b, 'th'));
+  const filteredOffers = offers.filter((offer) => {
+    if (factoryFilter && offer.factory_id !== factoryFilter) return false;
+    if (productFilter && offer.product_name !== productFilter) return false;
+    if (agentFilter && offer.agent_id !== agentFilter) return false;
+    if (statusFilter === 'active' && !offer.is_active) return false;
+    if (statusFilter === 'inactive' && offer.is_active) return false;
+    if (!needle) return true;
+    return [offer.factory_name, offer.product_name, offer.agent_name, offer.price, offer.po_number, offer.delivery_note_number]
+      .join(' ')
+      .toLowerCase()
+      .includes(needle);
+  }).sort((a, b) => {
+    const byFactory = (factoryOrder.get(a.factory_id) ?? Number.MAX_SAFE_INTEGER) - (factoryOrder.get(b.factory_id) ?? Number.MAX_SAFE_INTEGER);
+    if (byFactory !== 0) return byFactory;
+    const byProduct = a.product_name.localeCompare(b.product_name, 'th');
+    if (byProduct !== 0) return byProduct;
+    const byPrice = Number(b.price) - Number(a.price);
+    if (byPrice !== 0) return byPrice;
+    return a.sheet_order - b.sheet_order;
+  });
+  const filtersActive = Boolean(needle || factoryFilter || productFilter || agentFilter || statusFilter);
+  const clearFilters = () => {
+    setSearch('');
+    setFactoryFilter('');
+    setProductFilter('');
+    setAgentFilter('');
+    setStatusFilter('');
+  };
+  const selectFactory = (factoryId: string) => {
+    setFactoryFilter(factoryId);
+    setProductFilter((current) => (
+      current && offers.some((offer) => offer.product_name === current && (!factoryId || offer.factory_id === factoryId))
+        ? current
+        : ''
+    ));
+  };
+
   return (
-    <div className="space-y-6">
-      <NoticeBox notice={notice} />
+    <div className="space-y-4">
+      <NoticeBox notice={notice} onClose={dismissNotice} />
 
-      <section className="card p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <FileSpreadsheet className="w-5 h-5 text-green-600" />
-          <h2 className="text-lg font-semibold text-gray-800">นำเข้าราคาจาก Excel / CSV</h2>
-        </div>
-        <p className="text-sm text-gray-600 mb-3">
-          คอลัมน์ที่ต้องมี: โรงงานปลายทาง, สินค้า, ชื่อตัวแทน, ราคาล่าสุด (เลข PO และเลขใบนำส่งใส่หรือไม่ก็ได้ ช่องว่างจะไม่ลบค่าเดิม)
-          ถ้ามีแถวผิดแม้แถวเดียว ระบบจะไม่บันทึกทั้งไฟล์ ไฟล์ CSV ให้บันทึกเป็น &ldquo;CSV UTF-8&rdquo;
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="file"
-            accept=".xlsx,.csv"
-            aria-label="ไฟล์ราคา"
-            className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200"
-            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-          />
-          <button type="button" className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!importFile || importing} onClick={runImport}>
-            <Upload className="w-4 h-4" />
-            {importing ? 'กำลังนำเข้า...' : 'นำเข้า'}
-          </button>
-        </div>
-      </section>
+      <nav aria-label="ตั้งค่าพื้นฐาน" className="flex flex-wrap gap-2 border-b border-gray-200">
+        {SETTINGS_TABS.map((item) => {
+          const selected = settingsTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={selected ? 'page' : undefined}
+              className={`shrink-0 min-h-11 px-4 py-2 -mb-px border-b-2 text-sm font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${selected ? 'border-green-500 text-green-700' : 'border-transparent text-gray-600 hover:text-green-600'}`}
+              onClick={() => setSettingsTab(item.id)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-800">โรงงาน</h2>
-          <ul className="divide-y divide-gray-100">
+      {settingsTab === 'factories' && (
+        <section className="card p-4">
+          <h2 className="text-base font-semibold text-gray-800">โรงงาน</h2>
+          <ul>
             {factories.map((factory) => (
               <NamedRow
                 key={`${factory.id}-${factory.name}`}
@@ -315,23 +453,28 @@ export default function SettingsClient() {
                   await mutate(`/api/admin/direct-to-factory/factories/${factory.id}`, { method: 'PATCH', body: JSON.stringify({ name }) }, 'บันทึกชื่อโรงงานแล้ว');
                 }}
                 onToggle={async () => {
-                  await mutate(`/api/admin/direct-to-factory/factories/${factory.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !factory.is_active }) }, 'บันทึกแล้ว');
+                  await mutate(
+                    `/api/admin/direct-to-factory/factories/${factory.id}`,
+                    { method: 'PATCH', body: JSON.stringify({ is_active: !factory.is_active }) },
+                    'บันทึกแล้ว'
+                  );
                 }}
               />
             ))}
-            {factories.length === 0 && <li className="py-3 text-sm text-gray-500">ยังไม่มีโรงงาน</li>}
+            {factories.length === 0 && <li className="py-2 text-sm text-gray-500">ยังไม่มีโรงงาน</li>}
           </ul>
           <AddByName
             label="ชื่อโรงงานใหม่"
             onAdd={(name) => mutate('/api/admin/direct-to-factory/factories', { method: 'POST', body: JSON.stringify({ name }) }, 'เพิ่มโรงงานแล้ว')}
           />
         </section>
+      )}
 
-        <section className="card p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-gray-800">ตัวแทน</h2>
-          <p className="text-sm text-gray-600">ถ้าราคาเท่ากัน ระบบเลือกตัวแทนที่อยู่ด้านบนก่อน</p>
-          <ul className="divide-y divide-gray-100">
-            {agents.map((agent, index) => (
+      {settingsTab === 'agents' && (
+        <section className="card p-4">
+          <h2 className="text-base font-semibold text-gray-800">ตัวแทน</h2>
+          <ul>
+            {agents.map((agent) => (
               <NamedRow
                 key={`${agent.id}-${agent.name}`}
                 row={agent}
@@ -339,79 +482,203 @@ export default function SettingsClient() {
                   await mutate(`/api/admin/direct-to-factory/agents/${agent.id}`, { method: 'PATCH', body: JSON.stringify({ name }) }, 'บันทึกชื่อตัวแทนแล้ว');
                 }}
                 onToggle={async () => {
-                  await mutate(`/api/admin/direct-to-factory/agents/${agent.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !agent.is_active }) }, 'บันทึกแล้ว');
+                  await mutate(
+                    `/api/admin/direct-to-factory/agents/${agent.id}`,
+                    { method: 'PATCH', body: JSON.stringify({ is_active: !agent.is_active }) },
+                    'บันทึกแล้ว'
+                  );
                 }}
-                extra={
-                  <span className="flex gap-1">
-                    <button
-                      type="button"
-                      className="btn-secondary px-2 disabled:opacity-50"
-                      disabled={index === 0}
-                      aria-label={`เลื่อน ${agent.name} ขึ้น`}
-                      onClick={() => mutate(`/api/admin/direct-to-factory/agents/${agent.id}`, { method: 'PATCH', body: JSON.stringify({ direction: 'up' }) }, 'จัดลำดับแล้ว')}
-                    >
-                      <ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary px-2 disabled:opacity-50"
-                      disabled={index === agents.length - 1}
-                      aria-label={`เลื่อน ${agent.name} ลง`}
-                      onClick={() => mutate(`/api/admin/direct-to-factory/agents/${agent.id}`, { method: 'PATCH', body: JSON.stringify({ direction: 'down' }) }, 'จัดลำดับแล้ว')}
-                    >
-                      <ArrowDown className="w-4 h-4" />
-                    </button>
-                  </span>
-                }
               />
             ))}
-            {agents.length === 0 && <li className="py-3 text-sm text-gray-500">ยังไม่มีตัวแทน</li>}
+            {agents.length === 0 && <li className="py-2 text-sm text-gray-500">ยังไม่มีตัวแทน</li>}
           </ul>
           <AddByName
             label="ชื่อตัวแทนใหม่"
             onAdd={(name) => mutate('/api/admin/direct-to-factory/agents', { method: 'POST', body: JSON.stringify({ name }) }, 'เพิ่มตัวแทนแล้ว')}
           />
         </section>
-      </div>
+      )}
 
-      <section className="card p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">สินค้าและราคาของตัวแทน</h2>
-          <label className="text-sm text-gray-700">
-            <span className="block mb-1">กรองตามโรงงาน</span>
-            <select className="input" value={factoryFilter} onChange={(e) => setFactoryFilter(e.target.value)}>
-              <option value="">ทุกโรงงาน</option>
-              {factories.map((factory) => (
-                <option key={factory.id} value={factory.id}>
-                  {factory.name}
-                </option>
-              ))}
-            </select>
-          </label>
+      {settingsTab === 'forms' && (
+        <section className="card p-4 space-y-4">
+          <h2 className="text-base font-semibold text-gray-800">แบบฟอร์ม</h2>
+          <p className="text-sm text-gray-600">อัปโหลดครั้งเดียว แล้วเลือกชื่อนี้ในหลายแถวราคา</p>
+          <ul className="divide-y divide-gray-100">
+            {forms.map((form) => (
+              <li key={form.id} className="flex flex-wrap items-center gap-2 py-2">
+                <span className={`flex-1 min-w-0 text-sm ${form.is_active ? 'text-gray-900' : 'text-gray-500'}`}>{form.name}</span>
+                <a href={`/api/admin/direct-to-factory/forms/${form.id}`} className="text-sm text-green-700 hover:text-green-800 truncate max-w-48">
+                  {form.file_name}
+                </a>
+                <label className="btn-secondary text-sm cursor-pointer min-h-11 inline-flex items-center">
+                  เปลี่ยนไฟล์
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept={ORDER_FILE_ACCEPT}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      const body = new FormData();
+                      body.append('file', file);
+                      const ok = await mutate(`/api/admin/direct-to-factory/forms/${form.id}/file`, { method: 'POST', body }, 'เปลี่ยนไฟล์แล้ว');
+                      if (ok) await reload();
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={textButton}
+                  onClick={() => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !form.is_active }) }, 'บันทึกแล้ว')}
+                >
+                  {form.is_active ? 'ปิดใช้' : 'เปิดใช้'}
+                </button>
+              </li>
+            ))}
+            {forms.length === 0 && <li className="py-2 text-sm text-gray-500">ยังไม่มีแบบฟอร์ม</li>}
+          </ul>
+          <form
+            className="border-t border-gray-100 pt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!newFormName.trim() || !newFormFile) return;
+              const body = new FormData();
+              body.append('name', newFormName.trim());
+              body.append('file', newFormFile);
+              const ok = await mutate('/api/admin/direct-to-factory/forms', { method: 'POST', body }, 'เพิ่มแบบฟอร์มแล้ว');
+              if (ok) {
+                setNewFormName('');
+                setNewFormFile(null);
+              }
+            }}
+          >
+            <label className="text-sm text-gray-700 min-w-0">
+              <span className="block mb-1">ชื่อเรียก</span>
+              <input className="input" value={newFormName} onChange={(e) => setNewFormName(e.target.value)} placeholder="เช่น ฟอร์มโรงงาน A" aria-label="ชื่อแบบฟอร์ม" />
+            </label>
+            <label className="btn-secondary min-h-11 inline-flex items-center gap-2 cursor-pointer max-w-full">
+              <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{newFormFile ? newFormFile.name : 'เลือกไฟล์'}</span>
+              <input
+                key={newFormFile ? newFormFile.name : 'empty'}
+                type="file"
+                className="sr-only"
+                accept={ORDER_FILE_ACCEPT}
+                aria-label="ไฟล์แบบฟอร์ม"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setNewFormFile(file);
+                  if (file && !newFormName.trim()) {
+                    setNewFormName(file.name.replace(/\.[^.]+$/, ''));
+                  }
+                }}
+              />
+            </label>
+            <button type="submit" className="btn-primary min-h-11 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newFormName.trim() || !newFormFile}>
+              เพิ่มแบบฟอร์ม
+            </button>
+          </form>
+        </section>
+      )}
+
+      {settingsTab === 'offers' && (
+      <section className="card overflow-hidden">
+        <div className="space-y-3 border-b border-gray-100 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-gray-800">
+              สินค้าและราคา{' '}
+              <span className="font-normal text-sm text-gray-600">
+                {filteredOffers.length === offers.length ? `${offers.length} รายการ` : `${filteredOffers.length} จาก ${offers.length} รายการ`}
+              </span>
+            </h2>
+            {filtersActive && (
+              <button type="button" className="btn-secondary text-sm" onClick={clearFilters}>
+                ล้างตัวกรอง
+              </button>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <label className="text-sm text-gray-700 sm:col-span-2">
+              <span className="mb-1 block">ค้นหา</span>
+              <input
+                className="input"
+                type="search"
+                value={search}
+                placeholder="โรงงาน สินค้า ตัวแทน ราคา เลข PO ใบนำส่ง"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">โรงงาน</span>
+              <select className="input" value={factoryFilter} onChange={(event) => selectFactory(event.target.value)}>
+                <option value="">ทั้งหมด</option>
+                {factories.map((factory) => (
+                  <option key={factory.id} value={factory.id}>
+                    {factory.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">สินค้า</span>
+              <select className="input" value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+                <option value="">ทั้งหมด</option>
+                {productOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">ตัวแทน</span>
+              <select className="input" value={agentFilter} onChange={(event) => setAgentFilter(event.target.value)}>
+                <option value="">ทั้งหมด</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">สถานะ</span>
+              <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="">ทั้งหมด</option>
+                <option value="active">เปิดใช้</option>
+                <option value="inactive">ปิดใช้</option>
+              </select>
+            </label>
+          </div>
         </div>
 
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">โรงงาน</th>
-                <th className="px-3 py-2 text-left font-medium">สินค้า</th>
-                <th className="px-3 py-2 text-left font-medium">ตัวแทน</th>
-                <th className="px-3 py-2 text-right font-medium">ราคาล่าสุด</th>
-                <th className="px-3 py-2 text-left font-medium">เลข PO</th>
-                <th className="px-3 py-2 text-left font-medium">เลขใบนำส่ง</th>
-                <th className="px-3 py-2 text-left font-medium">ไฟล์แบบฟอร์ม</th>
-                <th className="px-3 py-2 text-left font-medium">สถานะ</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">โรงงาน</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">สินค้า</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">ตัวแทน</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาล่าสุด</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">เลข PO</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">เลขใบนำส่ง</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">แบบฟอร์ม</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">สถานะ</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">อัปเดตล่าสุด</th>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">
+                  <span className="sr-only">จัดการ</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {offers.map((offer) => (
-                <OfferRowEditor key={`${offer.id}-${offer.updated_at}`} offer={offer} onSaved={reload} onError={showError} />
+              {filteredOffers.map((offer) => (
+                <OfferRowEditor key={`${offer.id}-${offer.updated_at}`} offer={offer} forms={forms} onSaved={reload} onError={showError} />
               ))}
-              {offers.length === 0 && (
+              {filteredOffers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-gray-500">
-                    ยังไม่มีข้อมูล นำเข้าจากไฟล์หรือเพิ่มด้านล่าง
+                  <td colSpan={10} className="px-3 py-8 text-center text-gray-500">
+                    {offers.length === 0 ? 'ยังไม่มีข้อมูล นำเข้าจากไฟล์หรือเพิ่มด้านล่าง' : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
                   </td>
                 </tr>
               )}
@@ -419,54 +686,62 @@ export default function SettingsClient() {
           </table>
         </div>
 
-        <form
-          className="mt-6 border-t border-gray-100 pt-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const ok = await mutate('/api/admin/direct-to-factory/offers', { method: 'POST', body: JSON.stringify(newOffer) }, 'บันทึกข้อเสนอแล้ว');
-            if (ok) setNewOffer(EMPTY_NEW_OFFER);
-          }}
-        >
-          <h3 className="font-medium text-gray-800 mb-3">เพิ่มข้อเสนอทีละรายการ</h3>
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {(
-              [
-                ['factory_name', 'โรงงาน', 'factory-options'],
-                ['product_name', 'สินค้า', undefined],
-                ['agent_name', 'ตัวแทน', 'agent-options'],
-                ['price', 'ราคาล่าสุด', undefined],
-                ['po_number', 'เลข PO', undefined],
-                ['delivery_note_number', 'เลขใบนำส่ง', undefined],
-              ] as const
-            ).map(([field, label, list]) => (
-              <label key={field} className="text-sm text-gray-700">
-                <span className="block mb-1">{label}</span>
-                <input
-                  className="input"
-                  list={list}
-                  inputMode={field === 'price' ? 'decimal' : undefined}
-                  required={field !== 'po_number' && field !== 'delivery_note_number'}
-                  value={newOffer[field]}
-                  onChange={(e) => setNewOffer({ ...newOffer, [field]: e.target.value })}
-                />
-              </label>
-            ))}
-          </div>
-          <datalist id="factory-options">
-            {factories.map((factory) => (
-              <option key={factory.id} value={factory.name} />
-            ))}
-          </datalist>
-          <datalist id="agent-options">
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.name} />
-            ))}
-          </datalist>
-          <button type="submit" className="btn-primary mt-3 flex items-center gap-1">
-            <Plus className="w-4 h-4" /> บันทึกข้อเสนอ
-          </button>
-        </form>
+        <details className="border-t border-gray-100 p-4" {...(offers.length === 0 ? { open: true } : {})}>
+          <summary className="cursor-pointer text-sm font-medium text-gray-800 w-fit">เพิ่มข้อเสนอทีละรายการ</summary>
+          <form
+            className="mt-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const ok = await mutate('/api/admin/direct-to-factory/offers', { method: 'POST', body: JSON.stringify(newOffer) }, 'บันทึกข้อเสนอแล้ว');
+              if (ok) setNewOffer(EMPTY_NEW_OFFER);
+            }}
+          >
+            <div className="grid gap-2 sm:grid-cols-3">
+              {(
+                [
+                  ['factory_name', 'โรงงาน', 'factory-options'],
+                  ['product_name', 'สินค้า', undefined],
+                  ['agent_name', 'ตัวแทน', 'agent-options'],
+                  ['price', 'ราคาล่าสุด', undefined],
+                  ['po_number', 'เลข PO', undefined],
+                  ['delivery_note_number', 'เลขใบนำส่ง', undefined],
+                ] as const
+              ).map(([field, label, list]) => (
+                <label key={field} className="text-sm text-gray-700">
+                  <span className="block mb-1">{label}</span>
+                  <input
+                    className="input"
+                    list={list}
+                    inputMode={field === 'price' ? 'decimal' : undefined}
+                    required={field !== 'po_number' && field !== 'delivery_note_number'}
+                    value={newOffer[field]}
+                    onChange={(e) =>
+                      setNewOffer({
+                        ...newOffer,
+                        [field]: field === 'price' ? sanitizePriceInput(e.target.value) : e.target.value,
+                      })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            <datalist id="factory-options">
+              {factories.map((factory) => (
+                <option key={factory.id} value={factory.name} />
+              ))}
+            </datalist>
+            <datalist id="agent-options">
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.name} />
+              ))}
+            </datalist>
+            <button type="submit" className="btn-primary mt-3 flex items-center gap-1">
+              <Plus className="w-4 h-4" /> บันทึกข้อเสนอ
+            </button>
+          </form>
+        </details>
       </section>
+      )}
     </div>
   );
 }

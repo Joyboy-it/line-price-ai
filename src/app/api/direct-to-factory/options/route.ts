@@ -3,7 +3,7 @@ import { requireCustomer } from '@/lib/direct-to-factory/customer-access';
 import { listFactoryOptions } from '@/lib/direct-to-factory/queries';
 
 export async function GET() {
-  const guard = await requireCustomer();
+  const guard = await requireCustomer('view');
   if (guard.error) return guard.error;
 
   try {
