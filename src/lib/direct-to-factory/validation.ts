@@ -26,6 +26,12 @@ export function isPrice(value: unknown): boolean {
   return PRICE_PATTERN.test(String(value ?? '').trim());
 }
 
+/** Latest decision price. Null when the deduction exceeds factory price plus markup. */
+export function offerPriceFromParts(factoryPrice: number, markup: number, deduction: number): number | null {
+  const price = Math.round((factoryPrice + markup - deduction) * 100) / 100;
+  return price < 0 ? null : price;
+}
+
 /** Digits and one decimal point only, so a price field cannot keep letters. */
 export function sanitizePriceInput(value: string): string {
   const cleaned = value.replace(/[^\d.]/g, '');

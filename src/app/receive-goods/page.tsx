@@ -13,10 +13,12 @@ import {
   type ReceiveStatus,
 } from '@/lib/receive-goods';
 import ReceiveGoodsForm from './ReceiveGoodsForm';
+import ReceiveHistoryButton from './ReceiveHistoryButton';
 
 interface Notice {
   id: string;
   queue_no: number;
+  open_rank: number | null;
   destination_name: string | null;
   notified_date: string;
   planned_date: string | null;
@@ -40,8 +42,8 @@ export default async function ReceiveGoodsPage() {
     );
   }
 
-  const customer = await queryOne<{ shop_name: string | null }>(
-    `SELECT shop_name FROM users WHERE id = $1`,
+  const customer = await queryOne<{ name: string | null; shop_name: string | null }>(
+    `SELECT name, shop_name FROM users WHERE id = $1`,
     [session.user.id]
   );
 
@@ -55,23 +57,28 @@ export default async function ReceiveGoodsPage() {
      LIMIT 100`,
     [session.user.id]
   );
+  const openNotices = notices.filter((notice) => notice.status === 'waiting' || notice.status === 'queued');
+  const history = notices.filter((notice) => notice.status === 'completed' || notice.status === 'cancelled');
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1040px] overflow-x-hidden px-3 pt-5 pb-32 sm:px-4 min-[860px]:pb-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-0.5">แจ้งรับสินค้า</h1>
       <p className="text-gray-600 mb-5">แจ้งให้ไปรับสินค้า และติดตามสถานะคิว</p>
       <div className="grid w-full min-w-0 items-start gap-5 min-[860px]:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <ReceiveGoodsForm shopName={customer?.shop_name?.trim() || '-'} />
+        <ReceiveGoodsForm customerName={customer?.name?.trim() || '-'} shopName={customer?.shop_name?.trim() || '-'} />
         <section id="receive-queue" className="min-w-0" aria-labelledby="receive-queue-title">
-          <h2 id="receive-queue-title" className="text-lg font-semibold text-gray-900 mb-3">คิวของฉัน</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 id="receive-queue-title" className="text-lg font-semibold text-gray-900">คิวของฉัน</h2>
+            <ReceiveHistoryButton notices={history} />
+          </div>
           <div className="card p-4">
-            {notices.length === 0 ? (
+            {openNotices.length === 0 ? (
               <p className="py-7 text-center text-gray-600">ยังไม่มีรายการ<br />เมื่อส่งคำขอ คิวจะแสดงที่นี่</p>
             ) : (
-              notices.map((notice) => (
+              openNotices.map((notice) => (
                 <article key={notice.id} className="mb-2.5 rounded-[10px] border border-gray-200 p-3 last:mb-0">
                   <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <strong className="min-w-0">คิวที่ {notice.queue_no}</strong>
+                    <strong className="min-w-0">คิวที่ {notice.open_rank ?? notice.queue_no}</strong>
                     <span className={`whitespace-nowrap rounded-full border border-current/10 px-2.5 py-0.5 text-[13px] font-semibold ${RECEIVE_STATUS_ROW_CLASS[notice.status]}`}>
                       {RECEIVE_STATUS_LABELS[notice.status]}
                     </span>

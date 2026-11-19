@@ -18,7 +18,11 @@ export default async function NewFactoryOrderPage() {
         กลับไปรายการ
       </Link>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">แบบฟอร์มส่งตรงเข้าโรงงาน</h1>
-      <OrderForm customerName={session.user.name || session.user.shop_name || '-'} options={options} />
+      <OrderForm
+        customerName={session.user.name?.trim() || '-'}
+        shopName={session.user.shop_name?.trim() || '-'}
+        options={options}
+      />
     </div>
   );
 }

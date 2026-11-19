@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { logActionWithIp } from '@/lib/log-helper';
 import { requireStaff } from '@/lib/direct-to-factory/customer-access';
-import { cleanText, isPrice, isUuid } from '@/lib/direct-to-factory/validation';
+import { cleanText, isPrice, isUuid, offerPriceFromParts } from '@/lib/direct-to-factory/validation';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireStaff();
@@ -22,9 +22,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       sets.push(`${column} = $${values.length}`);
     };
 
-    if (body?.price !== undefined) {
-      if (!isPrice(body.price)) return NextResponse.json({ error: 'ราคาไม่ถูกต้อง' }, { status: 400 });
-      set('price', Number(String(body.price).trim()));
+    if (body?.factory_price !== undefined || body?.price_markup !== undefined || body?.profit_deduction !== undefined) {
+      if (!isPrice(body?.factory_price) || !isPrice(body?.price_markup) || !isPrice(body?.profit_deduction)) {
+        return NextResponse.json({ error: 'ราคาไม่ถูกต้อง' }, { status: 400 });
+      }
+      const factoryPrice = Number(String(body.factory_price).trim());
+      const markup = Number(String(body.price_markup).trim());
+      const deduction = Number(String(body.profit_deduction).trim());
+      const price = offerPriceFromParts(factoryPrice, markup, deduction);
+      if (price === null) {
+        return NextResponse.json({ error: 'หักส่วนต่างมากกว่าราคาโรงงานบวกเพิ่ม' }, { status: 400 });
+      }
+      set('factory_price', factoryPrice);
+      set('price_markup', markup);
+      set('profit_deduction', deduction);
+      set('price', price);
     }
     for (const column of ['po_number', 'delivery_note_number'] as const) {
       if (body?.[column] !== undefined) {

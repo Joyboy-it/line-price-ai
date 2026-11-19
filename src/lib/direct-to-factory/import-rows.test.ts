@@ -13,8 +13,8 @@ describe('parseOfferRows', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([
-      { line: 2, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '1', price: 9, poNumber: null, deliveryNoteNumber: null },
-      { line: 3, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '2', price: 9.73, poNumber: 'PO-1', deliveryNoteNumber: 'DN-1' },
+      { line: 2, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '1', price: 9, factoryPrice: 9, priceMarkup: 0, profitDeduction: 0, poNumber: null, deliveryNoteNumber: null, formName: null },
+      { line: 3, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '2', price: 9.73, factoryPrice: 9.73, priceMarkup: 0, profitDeduction: 0, poNumber: 'PO-1', deliveryNoteNumber: 'DN-1', formName: null },
     ]);
   });
 
@@ -26,7 +26,7 @@ describe('parseOfferRows', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([
-      { line: 2, factoryName: 'Prime', productName: 'SUS 202', agentName: '1', price: 1234.5, poNumber: null, deliveryNoteNumber: null },
+      { line: 2, factoryName: 'Prime', productName: 'SUS 202', agentName: '1', price: 1234.5, factoryPrice: 1234.5, priceMarkup: 0, profitDeduction: 0, poNumber: null, deliveryNoteNumber: null, formName: null },
     ]);
   });
 
@@ -58,6 +58,25 @@ describe('parseOfferRows', () => {
       { line: 4, message: 'ราคาไม่ถูกต้อง: -1' },
       { line: 5, message: 'ต้องระบุ ราคาล่าสุด' },
     ]);
+  });
+
+  it('recalculates the decision price from the three price columns and ignores a typed latest price', () => {
+    const result = parseOfferRows([
+      ['โรงงานปลายทาง', 'สินค้า', 'ชื่อตัวแทน', 'ราคาโรงงาน', 'ราคาบวกเพิ่ม', 'หักส่วนต่างกำไร', 'ราคาล่าสุด'],
+      ['Prime', 'SUS 201', '1', '10', '2', '1', '99'],
+    ]);
+
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({ price: 11, factoryPrice: 10, priceMarkup: 2, profitDeduction: 1 });
+  });
+
+  it('rejects a deduction larger than factory price plus markup', () => {
+    const result = parseOfferRows([
+      ['โรงงานปลายทาง', 'สินค้า', 'ชื่อตัวแทน', 'ราคาโรงงาน', 'ราคาบวกเพิ่ม', 'หักส่วนต่างกำไร'],
+      ['Prime', 'SUS 201', '1', '10', '2', '13'],
+    ]);
+
+    expect(result.errors).toEqual([{ line: 2, message: 'หักส่วนต่างมากกว่าราคาโรงงานบวกเพิ่ม' }]);
   });
 
   it('reports the same factory + product + agent appearing twice', () => {

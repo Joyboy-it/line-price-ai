@@ -8,6 +8,7 @@ import type { CustomerOrderView } from '@/lib/direct-to-factory/types';
 
 interface OrderFormProps {
   customerName: string;
+  shopName: string;
   options: FactoryOption[];
   order?: Pick<CustomerOrderView, 'id' | 'delivery_date' | 'factory_id' | 'product_id' | 'license_plate' | 'customer_note'>;
 }
@@ -23,7 +24,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export default function OrderForm({ customerName, options, order }: OrderFormProps) {
+export default function OrderForm({ customerName, shopName, options, order }: OrderFormProps) {
   const router = useRouter();
   const [values, setValues] = useState<Record<Field, string>>({
     delivery_date: order?.delivery_date ?? '',
@@ -76,9 +77,15 @@ export default function OrderForm({ customerName, options, order }: OrderFormPro
         </div>
       )}
 
-      <div>
-        <label htmlFor="customer_name" className="block text-sm font-medium text-gray-700 mb-1">ชื่อลูกค้า</label>
-        <input id="customer_name" className="input bg-gray-100" value={customerName} readOnly />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="min-w-0">
+          <label htmlFor="customer_name" className="block text-sm font-medium text-gray-700 mb-1">ชื่อลูกค้า</label>
+          <input id="customer_name" className="input bg-gray-100 py-1 text-sm" value={customerName} readOnly />
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="shop_name" className="block text-sm font-medium text-gray-700 mb-1">ชื่อร้าน</label>
+          <input id="shop_name" className="input bg-gray-100 py-1 text-sm" value={shopName} readOnly />
+        </div>
       </div>
 
       <div>

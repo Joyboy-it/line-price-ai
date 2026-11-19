@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Pencil, Plus, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Pencil, Plus, Upload, X } from 'lucide-react';
 import { OFFERS_CHANGED_EVENT } from '@/app/admin/direct-to-factory/DirectToFactoryTabs';
 import { fetchJson } from '@/lib/direct-to-factory/fetch-json';
 import { formatThaiDateTime } from '@/lib/direct-to-factory/format';
 import { ORDER_FILE_ACCEPT } from '@/lib/direct-to-factory/files-accept';
 import type { AgentRow, FactoryFormRow, FactoryRow, OfferRow } from '@/lib/direct-to-factory/queries';
-import { sanitizePriceInput } from '@/lib/direct-to-factory/validation';
+import { isPrice, offerPriceFromParts, sanitizePriceInput } from '@/lib/direct-to-factory/validation';
 
 type Notice = { type: 'success' | 'error'; text: string; details?: string[] } | null;
 
@@ -15,6 +15,16 @@ const iconButton =
   'inline-flex items-center justify-center h-11 w-11 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const textButton =
   'inline-flex items-center justify-center h-11 px-3 rounded-lg text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer';
+
+function formatMoney(value: string | number): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : '—';
+}
+
+function latestPrice(factoryPrice: string, markup: string, deduction: string): number | null {
+  if (![factoryPrice, markup, deduction].every((value) => isPrice(value))) return null;
+  return offerPriceFromParts(Number(factoryPrice), Number(markup), Number(deduction));
+}
 
 function NoticeBox({ notice, onClose }: { notice: Notice; onClose: () => void }) {
   useEffect(() => {
@@ -117,6 +127,67 @@ function NamedRow({
   );
 }
 
+function FormRow({
+  form,
+  onRename,
+  onToggle,
+  onReplaceFile,
+}: {
+  form: FactoryFormRow;
+  onRename: (name: string) => Promise<boolean>;
+  onToggle: () => Promise<void>;
+  onReplaceFile: (file: File) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(form.name);
+
+  if (editing) {
+    return (
+      <li className="py-2">
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (name.trim() && (await onRename(name.trim()))) setEditing(false);
+          }}
+        >
+          <input className="input min-w-0 flex-1" value={name} aria-label={`ชื่อ ${form.name}`} autoFocus onChange={(e) => setName(e.target.value)} />
+          <button type="submit" className="btn-primary text-sm shrink-0 disabled:opacity-50" disabled={!name.trim()}>บันทึก</button>
+          <button type="button" className="btn-secondary text-sm shrink-0" onClick={() => { setName(form.name); setEditing(false); }}>ยกเลิก</button>
+        </form>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex flex-wrap items-center gap-2 py-2">
+      <span className={`flex-1 min-w-0 text-sm ${form.is_active ? 'text-gray-900' : 'text-gray-500'}`}>{form.name}</span>
+      <a href={`/api/admin/direct-to-factory/forms/${form.id}`} className="text-sm text-green-700 hover:text-green-800 truncate max-w-48">
+        {form.file_name}
+      </a>
+      <button type="button" className={iconButton} aria-label={`แก้ชื่อ ${form.name}`} onClick={() => setEditing(true)}>
+        <Pencil className="w-4 h-4" />
+      </button>
+      <label className="btn-secondary text-sm cursor-pointer min-h-11 inline-flex items-center">
+        เปลี่ยนไฟล์
+        <input
+          type="file"
+          className="sr-only"
+          accept={ORDER_FILE_ACCEPT}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) await onReplaceFile(file);
+          }}
+        />
+      </label>
+      <button type="button" className={textButton} onClick={() => { void onToggle(); }}>
+        {form.is_active ? 'ปิดใช้' : 'เปิดใช้'}
+      </button>
+    </li>
+  );
+}
+
 function AddByName({ label, onAdd }: { label: string; onAdd: (name: string) => Promise<boolean> }) {
   const [name, setName] = useState('');
   return (
@@ -138,32 +209,46 @@ function AddByName({ label, onAdd }: { label: string; onAdd: (name: string) => P
 function OfferRowEditor({
   offer,
   forms,
+  expandAll,
   onSaved,
   onError,
 }: {
   offer: OfferRow;
   forms: FactoryFormRow[];
+  expandAll: { open: boolean; tick: number };
   onSaved: () => Promise<void>;
   onError: (message: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [price, setPrice] = useState(offer.price);
+  const [factoryPrice, setFactoryPrice] = useState(offer.factory_price);
+  const [markup, setMarkup] = useState(offer.price_markup);
+  const [deduction, setDeduction] = useState(offer.profit_deduction);
   const [poNumber, setPoNumber] = useState(offer.po_number ?? '');
   const [deliveryNote, setDeliveryNote] = useState(offer.delivery_note_number ?? '');
   const [active, setActive] = useState(offer.is_active);
   const [selectedFormId, setSelectedFormId] = useState(offer.form_id ?? '');
+  const [detailsOpen, setDetailsOpen] = useState(expandAll.open);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    setDetailsOpen(expandAll.open);
+  }, [expandAll]);
+
   const label = `${offer.product_name} ตัวแทน ${offer.agent_name}`;
+  const computed = latestPrice(factoryPrice, markup, deduction);
   const dirty =
-    price !== offer.price ||
+    factoryPrice !== offer.factory_price ||
+    markup !== offer.price_markup ||
+    deduction !== offer.profit_deduction ||
     poNumber !== (offer.po_number ?? '') ||
     deliveryNote !== (offer.delivery_note_number ?? '') ||
     active !== offer.is_active ||
     selectedFormId !== (offer.form_id ?? '');
 
   const cancel = () => {
-    setPrice(offer.price);
+    setFactoryPrice(offer.factory_price);
+    setMarkup(offer.price_markup);
+    setDeduction(offer.profit_deduction);
     setPoNumber(offer.po_number ?? '');
     setDeliveryNote(offer.delivery_note_number ?? '');
     setActive(offer.is_active);
@@ -175,7 +260,9 @@ function OfferRowEditor({
     setBusy(true);
     try {
       const fieldsChanged =
-        price !== offer.price ||
+        factoryPrice !== offer.factory_price ||
+        markup !== offer.price_markup ||
+        deduction !== offer.profit_deduction ||
         poNumber !== (offer.po_number ?? '') ||
         deliveryNote !== (offer.delivery_note_number ?? '') ||
         active !== offer.is_active ||
@@ -184,7 +271,9 @@ function OfferRowEditor({
         await fetchJson(`/api/admin/direct-to-factory/offers/${offer.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
-            price,
+            factory_price: factoryPrice,
+            price_markup: markup,
+            profit_deduction: deduction,
             po_number: poNumber,
             delivery_note_number: deliveryNote,
             is_active: active,
@@ -207,35 +296,34 @@ function OfferRowEditor({
 
   if (editing) {
     return (
+      <>
       <tr className="bg-gray-50">
+        <td className={cell} />
         <td className={cell}>
           {offer.factory_name}
           <form
             id={formId}
             onSubmit={(e) => {
               e.preventDefault();
-              if (dirty) save();
+              if (dirty && computed !== null) save();
             }}
           />
         </td>
         <td className={cell}>{offer.product_name}</td>
-        <td className={cell}>{offer.agent_name}</td>
+        <td className={`${cell} whitespace-nowrap`}>{offer.agent_name}</td>
         <td className={cell}>
-          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={price} aria-label={`ราคา ${label}`} onChange={(e) => setPrice(sanitizePriceInput(e.target.value))} />
+          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={factoryPrice} aria-label={`ราคาโรงงาน ${label}`} onChange={(e) => setFactoryPrice(sanitizePriceInput(e.target.value))} />
         </td>
         <td className={cell}>
-          <input form={formId} className={field} value={poNumber} aria-label={`เลข PO ${label}`} onChange={(e) => setPoNumber(e.target.value)} />
+          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={markup} aria-label={`ราคาบวกเพิ่ม ${label}`} onChange={(e) => setMarkup(sanitizePriceInput(e.target.value))} />
         </td>
         <td className={cell}>
-          <input form={formId} className={field} value={deliveryNote} aria-label={`เลขใบนำส่ง ${label}`} onChange={(e) => setDeliveryNote(e.target.value)} />
+          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={deduction} aria-label={`หักส่วนต่างกำไร ${label}`} onChange={(e) => setDeduction(sanitizePriceInput(e.target.value))} />
         </td>
-        <td className={cell}>
-          <select form={formId} className={field} aria-label={`แบบฟอร์ม ${label}`} value={selectedFormId} onChange={(e) => setSelectedFormId(e.target.value)}>
-            <option value="">ไม่ระบุ</option>
-            {forms.map((form) => (
-              <option key={form.id} value={form.id}>{form.name}{form.is_active ? '' : ' (ปิดใช้)'}</option>
-            ))}
-          </select>
+        <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>
+          {!isPrice(factoryPrice) || !isPrice(markup) || !isPrice(deduction) ? '—' : computed === null ? (
+            <span className="text-xs text-red-700">หักส่วนต่างมากกว่าราคาโรงงานบวกเพิ่ม</span>
+          ) : formatMoney(computed)}
         </td>
         <td className={cell}>
           <label className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700 min-h-11">
@@ -247,7 +335,7 @@ function OfferRowEditor({
           <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
         </td>
         <td className={`${cell} whitespace-nowrap`}>
-          <button type="submit" form={formId} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy || !dirty}>
+          <button type="submit" form={formId} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy || !dirty || computed === null}>
             {busy ? 'กำลังบันทึก...' : 'บันทึก'}
           </button>
           <button type="button" className="btn-secondary text-sm ml-2" disabled={busy} onClick={cancel}>
@@ -255,46 +343,94 @@ function OfferRowEditor({
           </button>
         </td>
       </tr>
+      <tr className="bg-gray-50">
+        <td colSpan={11} className="px-3 py-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">เลข PO</span>
+              <input form={formId} className={field} value={poNumber} aria-label={`เลข PO ${label}`} onChange={(e) => setPoNumber(e.target.value)} />
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">เลขใบนำส่ง</span>
+              <input form={formId} className={field} value={deliveryNote} aria-label={`เลขใบนำส่ง ${label}`} onChange={(e) => setDeliveryNote(e.target.value)} />
+            </label>
+            <label className="text-sm text-gray-700">
+              <span className="mb-1 block">แบบฟอร์ม</span>
+              <select form={formId} className={field} aria-label={`แบบฟอร์ม ${label}`} value={selectedFormId} onChange={(e) => setSelectedFormId(e.target.value)}>
+                <option value="">ไม่ระบุ</option>
+                {forms.map((form) => (
+                  <option key={form.id} value={form.id}>{form.name}{form.is_active ? '' : ' (ปิดใช้)'}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </td>
+      </tr>
+    </>
     );
   }
 
   return (
+    <>
     <tr className={`hover:bg-gray-50 ${offer.is_active ? '' : 'text-gray-500'}`}>
+      <td className={`${cell} whitespace-nowrap`}>
+        <button
+          type="button"
+          className={iconButton}
+          aria-expanded={detailsOpen}
+          aria-label={detailsOpen ? `หุบรายละเอียด ${label}` : `ขยายรายละเอียด ${label}`}
+          onClick={() => setDetailsOpen((open) => !open)}
+        >
+          {detailsOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+      </td>
       <td className={cell}>{offer.factory_name}</td>
       <td className={cell}>{offer.product_name}</td>
-      <td className={cell}>{offer.agent_name}</td>
-      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{offer.price}</td>
-      <td className={`${cell} whitespace-nowrap`}>{offer.po_number || '—'}</td>
-      <td className={`${cell} whitespace-nowrap`}>{offer.delivery_note_number || '—'}</td>
-      <td className={cell}>
-        {offer.form_id && offer.form_name ? (
-          <a
-            href={`/api/admin/direct-to-factory/forms/${offer.form_id}`}
-            className="inline-flex items-center gap-1 max-w-48 text-green-700 hover:text-green-800"
-            aria-label={`ดาวน์โหลด ${offer.form_name}`}
-            title={offer.form_name}
-          >
-            <Download className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 truncate">{offer.form_name}</span>
-          </a>
-        ) : (
-          '—'
-        )}
-      </td>
+      <td className={`${cell} whitespace-nowrap`}>{offer.agent_name}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.factory_price)}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.price_markup)}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.profit_deduction)}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.price)}</td>
       <td className={`${cell} whitespace-nowrap`}>{offer.is_active ? 'เปิดใช้' : 'ปิดใช้'}</td>
       <td className={`${cell} whitespace-nowrap text-gray-600`}>
         <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
       </td>
-      <td className={cell}>
-        <button type="button" className={iconButton} aria-label={`แก้ไข ${label}`} onClick={() => setEditing(true)}>
+      <td className={`${cell} whitespace-nowrap`}>
+        <button type="button" className={iconButton} aria-label={`แก้ไข ${label}`} onClick={() => { setDetailsOpen(true); setEditing(true); }}>
           <Pencil className="w-4 h-4" />
         </button>
       </td>
     </tr>
+    {detailsOpen && (
+      <tr className={offer.is_active ? 'bg-gray-50' : 'bg-gray-50 text-gray-500'}>
+        <td colSpan={11} className="px-3 py-2">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <span>เลข PO <span className="text-gray-900">{offer.po_number || '—'}</span></span>
+            <span>เลขใบนำส่ง <span className="text-gray-900">{offer.delivery_note_number || '—'}</span></span>
+            <span className="inline-flex items-center gap-1">
+              แบบฟอร์ม
+              {offer.form_id && offer.form_name ? (
+                <a
+                  href={`/api/admin/direct-to-factory/forms/${offer.form_id}`}
+                  className="inline-flex items-center gap-1 text-green-700 hover:text-green-800"
+                  aria-label={`ดาวน์โหลด ${offer.form_name}`}
+                >
+                  <Download className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span>{offer.form_name}</span>
+                </a>
+              ) : (
+                '—'
+              )}
+            </span>
+          </div>
+        </td>
+      </tr>
+    )}
+    </>
   );
 }
 
-const EMPTY_NEW_OFFER = { factory_name: '', product_name: '', agent_name: '', price: '', po_number: '', delivery_note_number: '' };
+const EMPTY_NEW_OFFER = { factory_name: '', product_name: '', agent_name: '', factory_price: '', price_markup: '', profit_deduction: '', po_number: '', delivery_note_number: '' };
 
 const SETTINGS_TABS = [
   { id: 'factories', label: 'โรงงาน' },
@@ -321,6 +457,7 @@ export default function SettingsClient() {
   const [notice, setNotice] = useState<Notice>(null);
   const [newOffer, setNewOffer] = useState(EMPTY_NEW_OFFER);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('offers');
+  const [expandAll, setExpandAll] = useState({ open: false, tick: 0 });
 
   const reload = useCallback(async () => {
     try {
@@ -505,36 +642,18 @@ export default function SettingsClient() {
           <p className="text-sm text-gray-600">อัปโหลดครั้งเดียว แล้วเลือกชื่อนี้ในหลายแถวราคา</p>
           <ul className="divide-y divide-gray-100">
             {forms.map((form) => (
-              <li key={form.id} className="flex flex-wrap items-center gap-2 py-2">
-                <span className={`flex-1 min-w-0 text-sm ${form.is_active ? 'text-gray-900' : 'text-gray-500'}`}>{form.name}</span>
-                <a href={`/api/admin/direct-to-factory/forms/${form.id}`} className="text-sm text-green-700 hover:text-green-800 truncate max-w-48">
-                  {form.file_name}
-                </a>
-                <label className="btn-secondary text-sm cursor-pointer min-h-11 inline-flex items-center">
-                  เปลี่ยนไฟล์
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept={ORDER_FILE_ACCEPT}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = '';
-                      if (!file) return;
-                      const body = new FormData();
-                      body.append('file', file);
-                      const ok = await mutate(`/api/admin/direct-to-factory/forms/${form.id}/file`, { method: 'POST', body }, 'เปลี่ยนไฟล์แล้ว');
-                      if (ok) await reload();
-                    }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  className={textButton}
-                  onClick={() => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !form.is_active }) }, 'บันทึกแล้ว')}
-                >
-                  {form.is_active ? 'ปิดใช้' : 'เปิดใช้'}
-                </button>
-              </li>
+              <FormRow
+                key={`${form.id}-${form.name}`}
+                form={form}
+                onRename={(name) => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ name }) }, 'บันทึกชื่อแบบฟอร์มแล้ว')}
+                onToggle={() => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !form.is_active }) }, 'บันทึกแล้ว')}
+                onReplaceFile={async (file) => {
+                  const body = new FormData();
+                  body.append('file', file);
+                  const ok = await mutate(`/api/admin/direct-to-factory/forms/${form.id}/file`, { method: 'POST', body }, 'เปลี่ยนไฟล์แล้ว');
+                  if (ok) await reload();
+                }}
+              />
             ))}
             {forms.length === 0 && <li className="py-2 text-sm text-gray-500">ยังไม่มีแบบฟอร์ม</li>}
           </ul>
@@ -657,13 +776,24 @@ export default function SettingsClient() {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
+                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">
+                  <button
+                    type="button"
+                    className={iconButton}
+                    aria-expanded={expandAll.open}
+                    aria-label={expandAll.open ? 'หุบทั้งหมด' : 'เปิดทั้งหมด'}
+                    onClick={() => setExpandAll((current) => ({ open: !current.open, tick: current.tick + 1 }))}
+                  >
+                    {expandAll.open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                </th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">โรงงาน</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">สินค้า</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">ตัวแทน</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาโรงงาน</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาบวกเพิ่ม</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">หักส่วนต่างกำไร</th>
                 <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาล่าสุด</th>
-                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">เลข PO</th>
-                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">เลขใบนำส่ง</th>
-                <th className="px-3 py-2 text-left font-medium whitespace-nowrap">แบบฟอร์ม</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">สถานะ</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">อัปเดตล่าสุด</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">
@@ -673,11 +803,11 @@ export default function SettingsClient() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredOffers.map((offer) => (
-                <OfferRowEditor key={`${offer.id}-${offer.updated_at}`} offer={offer} forms={forms} onSaved={reload} onError={showError} />
+                <OfferRowEditor key={`${offer.id}-${offer.updated_at}`} offer={offer} forms={forms} expandAll={expandAll} onSaved={reload} onError={showError} />
               ))}
               {filteredOffers.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-3 py-8 text-center text-gray-500">
                     {offers.length === 0 ? 'ยังไม่มีข้อมูล นำเข้าจากไฟล์หรือเพิ่มด้านล่าง' : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
                   </td>
                 </tr>
@@ -702,7 +832,9 @@ export default function SettingsClient() {
                   ['factory_name', 'โรงงาน', 'factory-options'],
                   ['product_name', 'สินค้า', undefined],
                   ['agent_name', 'ตัวแทน', 'agent-options'],
-                  ['price', 'ราคาล่าสุด', undefined],
+                  ['factory_price', 'ราคาโรงงาน', undefined],
+                  ['price_markup', 'ราคาบวกเพิ่ม', undefined],
+                  ['profit_deduction', 'หักส่วนต่างกำไร', undefined],
                   ['po_number', 'เลข PO', undefined],
                   ['delivery_note_number', 'เลขใบนำส่ง', undefined],
                 ] as const
@@ -712,13 +844,13 @@ export default function SettingsClient() {
                   <input
                     className="input"
                     list={list}
-                    inputMode={field === 'price' ? 'decimal' : undefined}
+                    inputMode={field === 'factory_price' || field === 'price_markup' || field === 'profit_deduction' ? 'decimal' : undefined}
                     required={field !== 'po_number' && field !== 'delivery_note_number'}
                     value={newOffer[field]}
                     onChange={(e) =>
                       setNewOffer({
                         ...newOffer,
-                        [field]: field === 'price' ? sanitizePriceInput(e.target.value) : e.target.value,
+                        [field]: field === 'factory_price' || field === 'price_markup' || field === 'profit_deduction' ? sanitizePriceInput(e.target.value) : e.target.value,
                       })
                     }
                   />
@@ -735,6 +867,15 @@ export default function SettingsClient() {
                 <option key={agent.id} value={agent.name} />
               ))}
             </datalist>
+            <p className="mt-3 text-sm tabular-nums text-gray-700">
+              {(() => {
+                const ready = [newOffer.factory_price, newOffer.price_markup, newOffer.profit_deduction].every((value) => isPrice(value));
+                const latest = latestPrice(newOffer.factory_price, newOffer.price_markup, newOffer.profit_deduction);
+                if (!ready) return 'ราคาล่าสุด —';
+                if (latest === null) return <span className="text-red-700">หักส่วนต่างมากกว่าราคาโรงงานบวกเพิ่ม</span>;
+                return `ราคาล่าสุด ${formatMoney(latest)}`;
+              })()}
+            </p>
             <button type="submit" className="btn-primary mt-3 flex items-center gap-1">
               <Plus className="w-4 h-4" /> บันทึกข้อเสนอ
             </button>

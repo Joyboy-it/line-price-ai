@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin, Factory, Plus } from 'lucide-react';
+import { Megaphone, Tag, Clock, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
 import { canReceiveGoods, getFactoryHomeAccess } from '@/lib/direct-to-factory/customer-access';
 import { PriceGroup, Announcement, AccessRequest } from '@/types';
 import { formatRelativeTime, formatDateTime } from '@/lib/utils';
@@ -108,29 +108,43 @@ export default async function HomePage() {
           {factoryAccess.view && (
             <Link
               href="/direct-to-factory"
-              className="flex flex-col justify-center gap-2 min-h-11 p-4 bg-white rounded-lg hover:bg-green-50 transition-colors cursor-pointer border border-green-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+              className="group flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-xl bg-blue-100 p-3 text-center text-blue-900 shadow-[0_4px_0_0_#93c5fd] transition duration-150 hover:bg-blue-200 active:translate-y-1 active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:flex-row sm:gap-4 sm:p-4 sm:text-left"
             >
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Factory className="w-5 h-5 text-green-600" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-medium text-gray-900">ส่งตรงเข้าโรงงาน</p>
-                <p className="text-sm text-gray-600">ดูรายการที่แจ้งไว้</p>
-              </div>
+              <Image
+                src="/home/factory.jpg"
+                alt=""
+                width={256}
+                height={256}
+                className="h-24 w-full rounded-lg bg-white object-contain p-1 sm:h-28 sm:w-28 sm:shrink-0"
+              />
+              <span className="min-w-0">
+                <span className="block text-base font-bold leading-snug sm:text-lg">ส่งตรงเข้าโรงงาน</span>
+                <span className="mt-2 inline-flex items-center justify-center gap-0.5 rounded-full border border-blue-300 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm sm:text-sm">
+                  ดูรายการที่แจ้งไว้
+                  <ChevronRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+                </span>
+              </span>
             </Link>
           )}
           {receiveGoods && (
             <Link
               href="/receive-goods"
-              className="flex flex-col justify-center gap-2 min-h-11 p-4 bg-white rounded-lg hover:bg-green-50 transition-colors cursor-pointer border border-green-200 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+              className="group flex min-w-0 cursor-pointer flex-col items-center gap-2 rounded-xl bg-blue-100 p-3 text-center text-blue-900 shadow-[0_4px_0_0_#93c5fd] transition duration-150 hover:bg-blue-200 active:translate-y-1 active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:flex-row sm:gap-4 sm:p-4 sm:text-left"
             >
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Plus className="w-5 h-5 text-green-600" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-medium text-gray-900">แจ้งรับสินค้า</p>
-                <p className="text-sm text-gray-600">กรอกแบบฟอร์ม</p>
-              </div>
+              <Image
+                src="/home/receive.jpg"
+                alt=""
+                width={256}
+                height={256}
+                className="h-24 w-full rounded-lg bg-white object-contain p-1 sm:h-28 sm:w-28 sm:shrink-0"
+              />
+              <span className="min-w-0">
+                <span className="block text-base font-bold leading-snug sm:text-lg">แจ้ง ส.เจริญชัย รับสินค้า</span>
+                <span className="mt-2 inline-flex items-center justify-center gap-0.5 rounded-full border border-blue-300 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm sm:text-sm">
+                  กรอกแบบฟอร์ม
+                  <ChevronRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+                </span>
+              </span>
             </Link>
           )}
         </section>

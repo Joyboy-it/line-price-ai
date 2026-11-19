@@ -17,19 +17,21 @@ export const RECEIVE_UNIT_LABELS: Record<ReceiveUnit, string> = {
   kilogram: 'กิโลกรัม',
 };
 
-export const RECEIVE_STATUSES = ['waiting', 'queued', 'completed'] as const;
+export const RECEIVE_STATUSES = ['waiting', 'queued', 'completed', 'cancelled'] as const;
 export type ReceiveStatus = (typeof RECEIVE_STATUSES)[number];
 
 export const RECEIVE_STATUS_LABELS: Record<ReceiveStatus, string> = {
   waiting: 'รอคิว',
   queued: 'จัดคิวแล้ว',
   completed: 'จบงาน',
+  cancelled: 'ยกเลิก',
 };
 
 export const RECEIVE_STATUS_ROW_CLASS: Record<ReceiveStatus, string> = {
   waiting: 'bg-amber-50 hover:bg-amber-100',
   queued: 'bg-sky-50 hover:bg-sky-100',
   completed: 'bg-green-50 hover:bg-green-100',
+  cancelled: 'bg-gray-100 hover:bg-gray-200',
 };
 
 export interface ReceiveItem {
@@ -43,7 +45,15 @@ export const RECEIVE_NOTICE_FIELDS = `
   to_char(n.created_at AT TIME ZONE 'Asia/Bangkok', 'YYYY-MM-DD') AS notified_date,
   to_char(n.receive_date, 'YYYY-MM-DD') AS planned_date,
   to_char(n.actual_receive_date, 'YYYY-MM-DD') AS actual_date,
+  to_char(n.completed_on, 'YYYY-MM-DD') AS completed_on,
+  to_char(n.cancelled_on, 'YYYY-MM-DD') AS cancelled_on,
   n.product_type, n.detail, n.note, n.staff_note, n.status,
+  CASE WHEN n.status IN ('waiting', 'queued') THEN (
+    SELECT COUNT(*)::int
+    FROM receive_goods_notices older
+    WHERE older.status IN ('waiting', 'queued')
+      AND (older.created_at < n.created_at OR (older.created_at = n.created_at AND older.id <= n.id))
+  ) END AS open_rank,
   COALESCE(
     json_agg(
       json_build_object(

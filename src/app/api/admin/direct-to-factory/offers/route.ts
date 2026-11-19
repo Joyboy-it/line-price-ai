@@ -3,7 +3,7 @@ import { transaction } from '@/lib/db';
 import { logActionWithIp } from '@/lib/log-helper';
 import { requireStaff } from '@/lib/direct-to-factory/customer-access';
 import { getOffersForProduct, listOffers, upsertOffer } from '@/lib/direct-to-factory/queries';
-import { cleanText, isPrice, isUuid } from '@/lib/direct-to-factory/validation';
+import { cleanText, isPrice, isUuid, offerPriceFromParts } from '@/lib/direct-to-factory/validation';
 
 export async function GET(request: NextRequest) {
   const guard = await requireStaff();
@@ -42,8 +42,16 @@ export async function POST(request: NextRequest) {
     if (!factoryName || !productName || !agentName) {
       return NextResponse.json({ error: 'ต้องระบุโรงงาน สินค้า และตัวแทน' }, { status: 400 });
     }
-    if (!isPrice(body?.price)) {
+    if (!isPrice(body?.factory_price) || !isPrice(body?.price_markup) || !isPrice(body?.profit_deduction)) {
       return NextResponse.json({ error: 'ราคาไม่ถูกต้อง' }, { status: 400 });
+    }
+    const price = offerPriceFromParts(
+      Number(String(body.factory_price).trim()),
+      Number(String(body.price_markup).trim()),
+      Number(String(body.profit_deduction).trim())
+    );
+    if (price === null) {
+      return NextResponse.json({ error: 'หักส่วนต่างมากกว่าราคาโรงงานบวกเพิ่ม' }, { status: 400 });
     }
     if (poNumber === undefined || deliveryNoteNumber === undefined) {
       return NextResponse.json({ error: 'เลข PO หรือเลขใบนำส่งยาวเกินไป' }, { status: 400 });
@@ -54,7 +62,10 @@ export async function POST(request: NextRequest) {
         factoryName,
         productName,
         agentName,
-        price: Number(String(body.price).trim()),
+        price,
+        factoryPrice: Number(String(body.factory_price).trim()),
+        priceMarkup: Number(String(body.price_markup).trim()),
+        profitDeduction: Number(String(body.profit_deduction).trim()),
         poNumber,
         deliveryNoteNumber,
       })
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
       factory: factoryName,
       product: productName,
       agent: agentName,
-      price: body.price,
+      price,
     });
 
     return NextResponse.json(result, { status: result.inserted ? 201 : 200 });

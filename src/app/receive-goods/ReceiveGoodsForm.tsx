@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { fetchJson } from '@/lib/direct-to-factory/fetch-json';
 import {
   RECEIVE_PRODUCTS,
@@ -33,7 +33,7 @@ function mergeLine(basket: BasketLine[], productType: ReceiveProduct, unit: Rece
     : line);
 }
 
-export default function ReceiveGoodsForm({ shopName }: { shopName: string }) {
+export default function ReceiveGoodsForm({ customerName, shopName }: { customerName: string; shopName: string }) {
   const router = useRouter();
   const qtyRef = useRef<HTMLInputElement>(null);
   const [dialogProduct, setDialogProduct] = useState<ReceiveProduct | null>(null);
@@ -102,7 +102,7 @@ export default function ReceiveGoodsForm({ shopName }: { shopName: string }) {
     setSubmitting(true);
     setError('');
     try {
-      const saved = await fetchJson<{ queue_no?: number }>('/api/receive-goods', {
+      const saved = await fetchJson<{ open_rank?: number }>('/api/receive-goods', {
         method: 'POST',
         body: JSON.stringify({
           note,
@@ -115,7 +115,7 @@ export default function ReceiveGoodsForm({ shopName }: { shopName: string }) {
       });
       setBasket([]);
       setNote('');
-      setToast(saved.queue_no ? `ส่งคำขอแล้ว คิวที่ ${saved.queue_no}` : 'ส่งคำขอแล้ว');
+      setToast(saved.open_rank ? `ส่งคำขอแล้ว คิวที่ ${saved.open_rank}` : 'ส่งคำขอแล้ว');
       router.refresh();
       if (window.innerWidth < 860) document.getElementById('receive-queue')?.scrollIntoView({ behavior: 'smooth' });
     } catch (submitError) {
@@ -133,11 +133,14 @@ export default function ReceiveGoodsForm({ shopName }: { shopName: string }) {
         void submit();
       }}
     >
-      <div>
-        <span className="block font-semibold mb-2">ชื่อร้าน</span>
-        <div className="flex min-w-0 items-center gap-2 min-h-12 rounded-[10px] border border-gray-200 bg-gray-100 px-3.5 text-gray-900">
-          <Lock className="w-[18px] h-[18px] shrink-0 text-gray-600" aria-hidden="true" />
-          <span className="min-w-0 break-words">{shopName}</span>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="min-w-0">
+          <label htmlFor="receive-customer-name" className="mb-1 block text-sm font-medium text-gray-700">ชื่อลูกค้า</label>
+          <input id="receive-customer-name" className="input bg-gray-100 py-1 text-sm" value={customerName} readOnly />
+        </div>
+        <div className="min-w-0">
+          <label htmlFor="receive-shop-name" className="mb-1 block text-sm font-medium text-gray-700">ชื่อร้าน</label>
+          <input id="receive-shop-name" className="input bg-gray-100 py-1 text-sm" value={shopName} readOnly />
         </div>
       </div>
 

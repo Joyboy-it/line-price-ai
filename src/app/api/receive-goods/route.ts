@@ -58,8 +58,15 @@ export async function POST(request: NextRequest) {
         [access.userId, customer?.destination_name ?? null, parsed.value.note]
       );
       const id = inserted.rows[0]?.id;
-      const queueNo = inserted.rows[0]?.queue_no;
       if (!id) throw new Error('missing notice id');
+      const rank = await client.query<{ open_rank: number }>(
+        `SELECT COUNT(*)::int AS open_rank
+         FROM receive_goods_notices
+         WHERE status IN ('waiting', 'queued')
+           AND (created_at < (SELECT created_at FROM receive_goods_notices WHERE id = $1)
+                OR (created_at = (SELECT created_at FROM receive_goods_notices WHERE id = $1) AND id <= $1))`,
+        [id]
+      );
       for (const [index, item] of parsed.value.items.entries()) {
         await client.query(
           `INSERT INTO receive_goods_items (notice_id, product_type, quantity, unit, sort_order)
@@ -67,7 +74,7 @@ export async function POST(request: NextRequest) {
           [id, item.product_type, item.quantity, item.unit, index]
         );
       }
-      return { id, queue_no: queueNo };
+      return { id, open_rank: rank.rows[0]?.open_rank };
     });
     return NextResponse.json(saved, { status: 201 });
   } catch (error) {

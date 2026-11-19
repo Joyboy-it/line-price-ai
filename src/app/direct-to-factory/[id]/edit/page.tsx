@@ -38,7 +38,8 @@ export default async function EditFactoryOrderPage({ params }: { params: Promise
       </Link>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">แก้ไขรายการส่งตรงเข้าโรงงาน</h1>
       <OrderForm
-        customerName={session.user.name || session.user.shop_name || '-'}
+        customerName={session.user.name?.trim() || '-'}
+        shopName={session.user.shop_name?.trim() || '-'}
         options={options}
         order={{
           id: order.id,

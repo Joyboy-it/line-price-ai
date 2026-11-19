@@ -358,6 +358,9 @@ export interface OfferRow {
   agent_sort_order: number;
   sheet_order: number;
   price: string;
+  factory_price: string;
+  price_markup: string;
+  profit_deduction: string;
   po_number: string | null;
   delivery_note_number: string | null;
   form_id: string | null;
@@ -391,7 +394,9 @@ export async function listOffers(factoryId?: string): Promise<OfferRow[]> {
   return query<OfferRow>(
     `SELECT ao.id, f.id AS factory_id, f.name AS factory_name, p.id AS product_id, p.name AS product_name,
        a.id AS agent_id, a.name AS agent_name, a.sort_order AS agent_sort_order, ao.sheet_order,
-       ao.price::text AS price, ao.po_number, ao.delivery_note_number,
+       ao.price::text AS price, ao.factory_price::text AS factory_price,
+       ao.price_markup::text AS price_markup, ao.profit_deduction::text AS profit_deduction,
+       ao.po_number, ao.delivery_note_number,
        ao.form_id, ff.name AS form_name, COALESCE(ff.file_name, ao.form_file_name) AS form_file_name,
        ao.is_active, ${iso('ao.updated_at')} AS updated_at
      FROM agent_offers ao
@@ -459,6 +464,9 @@ export async function upsertOffer(
     productName: string;
     agentName: string;
     price: number;
+    factoryPrice?: number;
+    priceMarkup?: number;
+    profitDeduction?: number;
     poNumber: string | null;
     deliveryNoteNumber: string | null;
     /** null keeps the form already linked to this offer. */
@@ -473,21 +481,30 @@ export async function upsertOffer(
   const form = input.formName
     ? await client.query<{ id: string }>('SELECT id FROM factory_forms WHERE name = $1', [input.formName])
     : null;
+  const factoryPrice = input.factoryPrice ?? input.price;
+  const priceMarkup = input.priceMarkup ?? 0;
+  const profitDeduction = input.profitDeduction ?? 0;
   const explicitOrder = input.sheetOrder != null;
   const sheetOrder = explicitOrder
     ? input.sheetOrder
     : (await client.query<{ n: number }>('SELECT COALESCE(MAX(sheet_order), 0) + 1 AS n FROM agent_offers')).rows[0].n;
   const result = await client.query<{ id: string; inserted: boolean }>(
-    `INSERT INTO agent_offers (product_id, agent_id, price, po_number, delivery_note_number, form_id, sheet_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO agent_offers (
+       product_id, agent_id, price, factory_price, price_markup, profit_deduction,
+       po_number, delivery_note_number, form_id, sheet_order
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (product_id, agent_id) DO UPDATE SET
        price = EXCLUDED.price,
+       factory_price = EXCLUDED.factory_price,
+       price_markup = EXCLUDED.price_markup,
+       profit_deduction = EXCLUDED.profit_deduction,
        po_number = COALESCE(EXCLUDED.po_number, agent_offers.po_number),
        delivery_note_number = COALESCE(EXCLUDED.delivery_note_number, agent_offers.delivery_note_number),
        form_id = COALESCE(EXCLUDED.form_id, agent_offers.form_id),
-       sheet_order = CASE WHEN $8 THEN EXCLUDED.sheet_order ELSE agent_offers.sheet_order END
+       sheet_order = CASE WHEN $11 THEN EXCLUDED.sheet_order ELSE agent_offers.sheet_order END
      RETURNING id, (xmax = 0) AS inserted`,
-    [productId, agentId, input.price, input.poNumber, input.deliveryNoteNumber, form?.rows[0]?.id ?? null, sheetOrder, explicitOrder]
+    [productId, agentId, input.price, factoryPrice, priceMarkup, profitDeduction, input.poNumber, input.deliveryNoteNumber, form?.rows[0]?.id ?? null, sheetOrder, explicitOrder]
   );
   return result.rows[0];
 }

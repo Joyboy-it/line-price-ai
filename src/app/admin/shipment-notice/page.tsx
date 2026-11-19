@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { isStaff } from '@/lib/direct-to-factory/customer-access';
 import { RECEIVE_NOTICE_FIELDS, type ReceiveItem, type ReceiveStatus } from '@/lib/receive-goods';
+import AddQueue from './AddQueue';
 import ReceiveGoodsQueue from './Queue';
 
 export default async function ShipmentNoticePage() {
@@ -22,11 +23,14 @@ export default async function ShipmentNoticePage() {
   const notices = await query<{
     id: string;
     queue_no: number;
+    open_rank: number | null;
     shop_name: string | null;
     destination_name: string | null;
     notified_date: string;
     planned_date: string | null;
     actual_date: string | null;
+    completed_on: string | null;
+    cancelled_on: string | null;
     product_type: string | null;
     detail: string | null;
     note: string | null;
@@ -45,16 +49,17 @@ export default async function ShipmentNoticePage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
           <Truck className="w-6 h-6 text-green-600" aria-hidden="true" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-gray-800">แจ้งรับสินค้า</h1>
           <p className="text-gray-600">ติดตามคิวที่ลูกค้าแจ้งให้ไปรับ ไม่มีตัวแทนและไม่ส่งออกไฟล์</p>
         </div>
+        <AddQueue shops={shops} />
       </div>
-      <ReceiveGoodsQueue notices={notices} shops={shops} />
+      <ReceiveGoodsQueue notices={notices} />
     </div>
   );
 }
