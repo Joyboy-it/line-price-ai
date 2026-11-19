@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         profitDeduction: Number(String(body.profit_deduction).trim()),
         poNumber,
         deliveryNoteNumber,
+        formName: null,
       })
     );
 

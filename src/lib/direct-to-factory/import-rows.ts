@@ -105,7 +105,7 @@ export function parseOfferRows(rows: string[][]): { rows: ParsedOfferRow[]; erro
   ) as Record<keyof typeof COLUMNS, number>;
 
   const hasParts = PART_KEYS.some((key) => index[key] !== -1);
-  const missing = (['factoryName', 'productName', 'agentName'] as const)
+  const missing: string[] = (['factoryName', 'productName', 'agentName'] as const)
     .filter((key) => index[key] === -1)
     .map((key) => COLUMNS[key]);
   if (hasParts) {

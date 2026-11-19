@@ -646,7 +646,9 @@ export default function SettingsClient() {
                 key={`${form.id}-${form.name}`}
                 form={form}
                 onRename={(name) => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ name }) }, 'บันทึกชื่อแบบฟอร์มแล้ว')}
-                onToggle={() => mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !form.is_active }) }, 'บันทึกแล้ว')}
+                onToggle={async () => {
+                  await mutate(`/api/admin/direct-to-factory/forms/${form.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !form.is_active }) }, 'บันทึกแล้ว');
+                }}
                 onReplaceFile={async (file) => {
                   const body = new FormData();
                   body.append('file', file);
