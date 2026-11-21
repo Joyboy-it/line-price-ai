@@ -1,6 +1,5 @@
-const CACHE_NAME = 'scharoenchai-v3';
+const CACHE_NAME = 'scharoenchai-v4';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/pwa-icon-192.png',
   '/pwa-icon-512.png',
@@ -79,7 +78,8 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/')) return;
+  if (url.origin !== self.location.origin) return;
+  if (!STATIC_ASSETS.includes(url.pathname)) return;
 
   event.respondWith(
     fetch(event.request)
