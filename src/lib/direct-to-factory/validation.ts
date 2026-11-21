@@ -86,6 +86,42 @@ export function parseCustomerOrderInput(
   };
 }
 
+export interface StaffOrderInput extends CustomerOrderInput {
+  userId: string;
+}
+
+/** Customer fields plus the customer the staff member is ordering for. */
+export function parseStaffOrderInput(
+  body: Record<string, unknown> | null
+): { value: StaffOrderInput; errors?: never } | { value?: never; errors: Record<string, string> } {
+  const parsed = parseCustomerOrderInput(body);
+  const errors = { ...(parsed.errors ?? {}) };
+  if (!isUuid(body?.user_id)) errors.user_id = 'กรุณาเลือกลูกค้า';
+  if (Object.keys(errors).length > 0) return { errors };
+  return { value: { ...parsed.value!, userId: body!.user_id as string } };
+}
+
+const PRODUCT_CLOSED = {
+  error: 'สินค้านี้ยังไม่เปิดรับ',
+  fields: { product_id: 'สินค้านี้ยังไม่เปิดรับที่โรงงานนี้' },
+};
+
+/** Why a staff-created order cannot be saved. Permission is checked before the product. */
+export function staffCreateOrderRefusal(checks: {
+  eligible: boolean;
+  productAvailable: boolean;
+  hasOffer: boolean;
+}): { error: string; fields: Record<string, string> } | null {
+  if (!checks.eligible) {
+    return {
+      error: 'ลูกค้านี้ยังไม่มีสิทธิ์ส่งตรงเข้าโรงงาน',
+      fields: { user_id: 'ลูกค้านี้ยังไม่มีสิทธิ์ส่งตรงเข้าโรงงาน' },
+    };
+  }
+  if (!checks.productAvailable || !checks.hasOffer) return PRODUCT_CLOSED;
+  return null;
+}
+
 /** Turns query-string values into safe staff list filters; invalid values are ignored. */
 export function parseStaffOrderFilters(get: (key: string) => string | null | undefined) {
   const status = get('status');

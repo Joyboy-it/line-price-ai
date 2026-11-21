@@ -10,6 +10,16 @@ describe('describeFactoryOrderLog', () => {
     });
   });
 
+  it('names the staff member when they create the order', () => {
+    expect(describeFactoryOrderLog('create_factory_order', {
+      by: 'staff',
+      delivery_date: '2026-11-21',
+    })).toEqual({
+      title: 'สร้างรายการ (เจ้าหน้าที่)',
+      detail: `วันที่ส่งสินค้า ${formatThaiDate('2026-11-21')}`,
+    });
+  });
+
   it('describes a staff edit and names the resulting status once', () => {
     expect(
       describeFactoryOrderLog('update_factory_order', {

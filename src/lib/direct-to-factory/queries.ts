@@ -306,6 +306,29 @@ const AVAILABLE_PRODUCT = `
     WHERE ao.product_id = p.id AND ao.is_active AND a.is_active
   )`;
 
+export interface EligibleFactoryCustomer {
+  id: string;
+  shop_name: string;
+  customer_name: string;
+}
+
+/** Customers staff may order for. Same three checks as hasFactoryAccess(..., 'view'). */
+export async function listEligibleFactoryCustomers(): Promise<EligibleFactoryCustomer[]> {
+  return query<EligibleFactoryCustomer>(
+    `SELECT u.id,
+       COALESCE(NULLIF(btrim(u.shop_name), ''), '-') AS shop_name,
+       COALESCE(NULLIF(btrim(u.name), ''), '-') AS customer_name
+     FROM users u
+     WHERE u.is_active = true
+       AND u.can_view_factory_orders = true
+       AND EXISTS (
+         SELECT 1 FROM access_requests ar
+         WHERE ar.user_id = u.id AND ar.status = 'approved'
+       )
+     ORDER BY shop_name, customer_name`
+  );
+}
+
 /** Factories and products a customer can choose. No prices or agents. */
 export async function listFactoryOptions(): Promise<FactoryOption[]> {
   return query<FactoryOption>(

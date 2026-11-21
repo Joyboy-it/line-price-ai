@@ -62,7 +62,7 @@ export function describeFactoryOrderLog(
 ): { title: string; detail: string } {
   if (action === 'create_factory_order') {
     const date = typeof details?.delivery_date === 'string' ? formatThaiDate(details.delivery_date) : '';
-    return { title: 'สร้างรายการ', detail: date && date !== '-' ? `วันที่ส่งสินค้า ${date}` : '' };
+    return { title: title('สร้างรายการ', details), detail: date && date !== '-' ? `วันที่ส่งสินค้า ${date}` : '' };
   }
   if (action === 'cancel_factory_order') {
     return { title: title('ยกเลิกรายการ', details), detail: '' };

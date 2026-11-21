@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import OrderSearchButton from './OrderSearchButton';
 import { bangkokDate, formatThaiDate, formatThaiDateTime } from '@/lib/direct-to-factory/format';
 import { ORDER_STATUSES, ORDER_STATUS_LABELS } from '@/lib/direct-to-factory/order-rules';
@@ -74,6 +74,10 @@ export default async function DirectToFactoryOrdersPage({ searchParams }: { sear
         dateIsDefault={filters.from === today && filters.to === today}
           factories={factories.map((factory) => ({ id: factory.id, name: factory.name }))}
         />
+        <Link href="/admin/direct-to-factory/orders/new" className="btn-primary min-h-11 inline-flex items-center gap-1 shrink-0">
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          เพิ่มรายการ
+        </Link>
       </div>
 
       <div className="card overflow-x-auto">
