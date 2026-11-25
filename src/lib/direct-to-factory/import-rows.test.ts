@@ -13,8 +13,8 @@ describe('parseOfferRows', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([
-      { line: 2, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '1', price: 9, factoryPrice: 9, priceMarkup: 0, profitDeduction: 0, poNumber: null, deliveryNoteNumber: null, formName: null },
-      { line: 3, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '2', price: 9.73, factoryPrice: 9.73, priceMarkup: 0, profitDeduction: 0, poNumber: 'PO-1', deliveryNoteNumber: 'DN-1', formName: null },
+      { line: 2, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '1', price: 9, factoryPrice: 9, priceMarkup: 0, profitDeduction: 0, oldPrice: undefined, poNumber: null, deliveryNoteNumber: null, formName: null },
+      { line: 3, factoryName: 'Prime', productName: 'สแตนเลส SUS 201', agentName: '2', price: 9.73, factoryPrice: 9.73, priceMarkup: 0, profitDeduction: 0, oldPrice: undefined, poNumber: 'PO-1', deliveryNoteNumber: 'DN-1', formName: null },
     ]);
   });
 
@@ -26,7 +26,7 @@ describe('parseOfferRows', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.rows).toEqual([
-      { line: 2, factoryName: 'Prime', productName: 'SUS 202', agentName: '1', price: 1234.5, factoryPrice: 1234.5, priceMarkup: 0, profitDeduction: 0, poNumber: null, deliveryNoteNumber: null, formName: null },
+      { line: 2, factoryName: 'Prime', productName: 'SUS 202', agentName: '1', price: 1234.5, factoryPrice: 1234.5, priceMarkup: 0, profitDeduction: 0, oldPrice: undefined, poNumber: null, deliveryNoteNumber: null, formName: null },
     ]);
   });
 
@@ -87,5 +87,24 @@ describe('parseOfferRows', () => {
     ]);
 
     expect(result.errors).toEqual([{ line: 3, message: 'ซ้ำกับแถวที่ 2 (Prime / SUS 201 / 1)' }]);
+  });
+
+  it('reads, clears, and rejects an optional old price without changing the latest price', () => {
+    const header = ['โรงงานปลายทาง', 'สินค้า', 'ชื่อตัวแทน', 'ราคาโรงงาน', 'ราคาบวกเพิ่ม', 'หักส่วนต่างกำไร', 'ราคาล่าสุด', 'ราคาเก่า'];
+    const filled = parseOfferRows([header, ['Prime', 'SUS 201', '1', '10', '2', '1', '99', '8.5']]);
+    const cleared = parseOfferRows([header, ['Prime', 'SUS 201', '1', '10', '2', '1', '99', '']]);
+    const invalid = parseOfferRows([header, ['Prime', 'SUS 201', '1', '10', '2', '1', '99', 'abc']]);
+    const absent = parseOfferRows([
+      ['โรงงานปลายทาง', 'สินค้า', 'ชื่อตัวแทน', 'ราคาโรงงาน', 'ราคาบวกเพิ่ม', 'หักส่วนต่างกำไร'],
+      ['Prime', 'SUS 201', '1', '10', '2', '1'],
+    ]);
+
+    expect(filled.errors).toEqual([]);
+    expect(filled.rows[0]).toMatchObject({ price: 11, oldPrice: 8.5 });
+    expect(cleared.errors).toEqual([]);
+    expect(cleared.rows[0].oldPrice).toBeNull();
+    expect(invalid.errors).toEqual([{ line: 2, message: 'ราคาไม่ถูกต้อง: abc' }]);
+    expect(absent.errors).toEqual([]);
+    expect(absent.rows[0].oldPrice).toBeUndefined();
   });
 });

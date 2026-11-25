@@ -5,6 +5,14 @@ import { requireStaff } from '@/lib/direct-to-factory/customer-access';
 import { getOffersForProduct, listOffers, upsertOffer } from '@/lib/direct-to-factory/queries';
 import { cleanText, isPrice, isUuid, offerPriceFromParts } from '@/lib/direct-to-factory/validation';
 
+function optionalOldPrice(value: unknown): { ok: true; price: number | null } | { ok: false } {
+  if (value === undefined || value === null) return { ok: true, price: null };
+  const text = String(value).trim();
+  if (text === '') return { ok: true, price: null };
+  if (!isPrice(text)) return { ok: false };
+  return { ok: true, price: Number(text) };
+}
+
 export async function GET(request: NextRequest) {
   const guard = await requireStaff();
   if (guard.error) return guard.error;
@@ -56,6 +64,10 @@ export async function POST(request: NextRequest) {
     if (poNumber === undefined || deliveryNoteNumber === undefined) {
       return NextResponse.json({ error: 'เลข PO หรือเลขใบนำส่งยาวเกินไป' }, { status: 400 });
     }
+    const oldPrice = body?.old_price === undefined ? undefined : optionalOldPrice(body.old_price);
+    if (oldPrice && !oldPrice.ok) {
+      return NextResponse.json({ error: 'ราคาไม่ถูกต้อง' }, { status: 400 });
+    }
 
     const result = await transaction((client) =>
       upsertOffer(client, {
@@ -66,6 +78,7 @@ export async function POST(request: NextRequest) {
         factoryPrice: Number(String(body.factory_price).trim()),
         priceMarkup: Number(String(body.price_markup).trim()),
         profitDeduction: Number(String(body.profit_deduction).trim()),
+        oldPrice: oldPrice?.price,
         poNumber,
         deliveryNoteNumber,
         formName: null,

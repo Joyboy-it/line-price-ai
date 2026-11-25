@@ -223,6 +223,7 @@ function OfferRowEditor({
   const [factoryPrice, setFactoryPrice] = useState(offer.factory_price);
   const [markup, setMarkup] = useState(offer.price_markup);
   const [deduction, setDeduction] = useState(offer.profit_deduction);
+  const [oldPrice, setOldPrice] = useState(offer.old_price ?? '');
   const [poNumber, setPoNumber] = useState(offer.po_number ?? '');
   const [deliveryNote, setDeliveryNote] = useState(offer.delivery_note_number ?? '');
   const [active, setActive] = useState(offer.is_active);
@@ -240,15 +241,18 @@ function OfferRowEditor({
     factoryPrice !== offer.factory_price ||
     markup !== offer.price_markup ||
     deduction !== offer.profit_deduction ||
+    oldPrice !== (offer.old_price ?? '') ||
     poNumber !== (offer.po_number ?? '') ||
     deliveryNote !== (offer.delivery_note_number ?? '') ||
     active !== offer.is_active ||
     selectedFormId !== (offer.form_id ?? '');
+  const oldPriceValid = oldPrice === '' || isPrice(oldPrice);
 
   const cancel = () => {
     setFactoryPrice(offer.factory_price);
     setMarkup(offer.price_markup);
     setDeduction(offer.profit_deduction);
+    setOldPrice(offer.old_price ?? '');
     setPoNumber(offer.po_number ?? '');
     setDeliveryNote(offer.delivery_note_number ?? '');
     setActive(offer.is_active);
@@ -263,6 +267,7 @@ function OfferRowEditor({
         factoryPrice !== offer.factory_price ||
         markup !== offer.price_markup ||
         deduction !== offer.profit_deduction ||
+        oldPrice !== (offer.old_price ?? '') ||
         poNumber !== (offer.po_number ?? '') ||
         deliveryNote !== (offer.delivery_note_number ?? '') ||
         active !== offer.is_active ||
@@ -274,6 +279,7 @@ function OfferRowEditor({
             factory_price: factoryPrice,
             price_markup: markup,
             profit_deduction: deduction,
+            old_price: oldPrice,
             po_number: poNumber,
             delivery_note_number: deliveryNote,
             is_active: active,
@@ -305,7 +311,7 @@ function OfferRowEditor({
             id={formId}
             onSubmit={(e) => {
               e.preventDefault();
-              if (dirty && computed !== null) save();
+              if (dirty && computed !== null && oldPriceValid) save();
             }}
           />
         </td>
@@ -326,6 +332,9 @@ function OfferRowEditor({
           ) : formatMoney(computed)}
         </td>
         <td className={cell}>
+          <input form={formId} className={`${field} tabular-nums text-right`} inputMode="decimal" value={oldPrice} aria-label={`ราคาเก่า ${label}`} onChange={(e) => setOldPrice(sanitizePriceInput(e.target.value))} />
+        </td>
+        <td className={cell}>
           <label className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700 min-h-11">
             <input form={formId} type="checkbox" className="h-4 w-4 accent-green-600" checked={active} onChange={(e) => setActive(e.target.checked)} />
             เปิดใช้
@@ -335,7 +344,7 @@ function OfferRowEditor({
           <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
         </td>
         <td className={`${cell} whitespace-nowrap`}>
-          <button type="submit" form={formId} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy || !dirty || computed === null}>
+          <button type="submit" form={formId} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={busy || !dirty || computed === null || !oldPriceValid}>
             {busy ? 'กำลังบันทึก...' : 'บันทึก'}
           </button>
           <button type="button" className="btn-secondary text-sm ml-2" disabled={busy} onClick={cancel}>
@@ -344,7 +353,7 @@ function OfferRowEditor({
         </td>
       </tr>
       <tr className="bg-gray-50">
-        <td colSpan={11} className="px-3 py-2">
+        <td colSpan={12} className="px-3 py-2">
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-sm text-gray-700">
               <span className="mb-1 block">เลข PO</span>
@@ -391,6 +400,7 @@ function OfferRowEditor({
       <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.price_markup)}</td>
       <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.profit_deduction)}</td>
       <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{formatMoney(offer.price)}</td>
+      <td className={`${cell} text-right tabular-nums whitespace-nowrap`}>{offer.old_price ? formatMoney(offer.old_price) : '—'}</td>
       <td className={`${cell} whitespace-nowrap`}>{offer.is_active ? 'เปิดใช้' : 'ปิดใช้'}</td>
       <td className={`${cell} whitespace-nowrap text-gray-600`}>
         <time dateTime={offer.updated_at}>{formatThaiDateTime(offer.updated_at)}</time>
@@ -403,7 +413,7 @@ function OfferRowEditor({
     </tr>
     {detailsOpen && (
       <tr className={offer.is_active ? 'bg-gray-50' : 'bg-gray-50 text-gray-500'}>
-        <td colSpan={11} className="px-3 py-2">
+        <td colSpan={12} className="px-3 py-2">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
             <span>เลข PO <span className="text-gray-900">{offer.po_number || '—'}</span></span>
             <span>เลขใบนำส่ง <span className="text-gray-900">{offer.delivery_note_number || '—'}</span></span>
@@ -430,7 +440,7 @@ function OfferRowEditor({
   );
 }
 
-const EMPTY_NEW_OFFER = { factory_name: '', product_name: '', agent_name: '', factory_price: '', price_markup: '', profit_deduction: '', po_number: '', delivery_note_number: '' };
+const EMPTY_NEW_OFFER = { factory_name: '', product_name: '', agent_name: '', factory_price: '', price_markup: '', profit_deduction: '', old_price: '', po_number: '', delivery_note_number: '' };
 
 const SETTINGS_TABS = [
   { id: 'factories', label: 'โรงงาน' },
@@ -796,6 +806,7 @@ export default function SettingsClient() {
                 <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาบวกเพิ่ม</th>
                 <th className="px-3 py-2 text-right font-medium whitespace-nowrap">หักส่วนต่างกำไร</th>
                 <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาล่าสุด</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">ราคาเก่า</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">สถานะ</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">อัปเดตล่าสุด</th>
                 <th className="px-3 py-2 text-left font-medium whitespace-nowrap">
@@ -809,7 +820,7 @@ export default function SettingsClient() {
               ))}
               {filteredOffers.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-gray-500">
+                  <td colSpan={12} className="px-3 py-8 text-center text-gray-500">
                     {offers.length === 0 ? 'ยังไม่มีข้อมูล นำเข้าจากไฟล์หรือเพิ่มด้านล่าง' : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
                   </td>
                 </tr>
@@ -878,6 +889,15 @@ export default function SettingsClient() {
                 return `ราคาล่าสุด ${formatMoney(latest)}`;
               })()}
             </p>
+            <label className="mt-3 block max-w-xs text-sm text-gray-700">
+              <span className="mb-1 block">ราคาเก่า</span>
+              <input
+                className="input tabular-nums text-right"
+                inputMode="decimal"
+                value={newOffer.old_price}
+                onChange={(e) => setNewOffer({ ...newOffer, old_price: sanitizePriceInput(e.target.value) })}
+              />
+            </label>
             <button type="submit" className="btn-primary mt-3 flex items-center gap-1">
               <Plus className="w-4 h-4" /> บันทึกข้อเสนอ
             </button>

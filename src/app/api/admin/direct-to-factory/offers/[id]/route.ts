@@ -4,6 +4,14 @@ import { logActionWithIp } from '@/lib/log-helper';
 import { requireStaff } from '@/lib/direct-to-factory/customer-access';
 import { cleanText, isPrice, isUuid, offerPriceFromParts } from '@/lib/direct-to-factory/validation';
 
+function optionalOldPrice(value: unknown): { ok: true; price: number | null } | { ok: false } {
+  if (value === undefined || value === null) return { ok: true, price: null };
+  const text = String(value).trim();
+  if (text === '') return { ok: true, price: null };
+  if (!isPrice(text)) return { ok: false };
+  return { ok: true, price: Number(text) };
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireStaff();
   if (guard.error) return guard.error;
@@ -37,6 +45,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       set('price_markup', markup);
       set('profit_deduction', deduction);
       set('price', price);
+    }
+    if (body?.old_price !== undefined) {
+      const oldPrice = optionalOldPrice(body.old_price);
+      if (!oldPrice.ok) return NextResponse.json({ error: 'ราคาไม่ถูกต้อง' }, { status: 400 });
+      set('old_price', oldPrice.price);
     }
     for (const column of ['po_number', 'delivery_note_number'] as const) {
       if (body?.[column] !== undefined) {

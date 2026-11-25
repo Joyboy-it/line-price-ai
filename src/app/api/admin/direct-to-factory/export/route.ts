@@ -21,6 +21,7 @@ export async function GET() {
       factoryPrice: offer.factory_price,
       priceMarkup: offer.price_markup,
       profitDeduction: offer.profit_deduction,
+      oldPrice: offer.old_price,
       poNumber: offer.po_number,
       deliveryNoteNumber: offer.delivery_note_number,
       formName: offer.form_name,

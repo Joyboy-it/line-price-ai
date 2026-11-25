@@ -15,6 +15,7 @@ describe('writeOfferSheet', () => {
         factoryPrice: '10',
         priceMarkup: '2',
         profitDeduction: '1',
+        oldPrice: '8.5',
         poNumber: 'PO-1',
         deliveryNoteNumber: 'DN-1',
         formName: 'ฟอร์ม Prime',
@@ -23,6 +24,7 @@ describe('writeOfferSheet', () => {
 
     expect(sheet.getCell('G2').formula).toBe('D2+E2-F2');
     expect(sheet.getCell('G2').result).toBe(11);
+    expect(sheet.getCell('H2').value).toBe(8.5);
 
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
     const parsed = parseOfferRows(await readSpreadsheet(buffer, 'ราคาตัวแทน.xlsx'));
@@ -36,6 +38,7 @@ describe('writeOfferSheet', () => {
       factoryPrice: 10,
       priceMarkup: 2,
       profitDeduction: 1,
+      oldPrice: 8.5,
       poNumber: 'PO-1',
       deliveryNoteNumber: 'DN-1',
       formName: 'ฟอร์ม Prime',
@@ -54,6 +57,7 @@ describe('writeOfferSheet', () => {
       'ราคาบวกเพิ่ม',
       'หักส่วนต่างกำไร',
       'ราคาล่าสุด',
+      'ราคาเก่า',
       'เลข PO',
       'เลขใบนำส่ง',
       'ชื่อแบบฟอร์ม',

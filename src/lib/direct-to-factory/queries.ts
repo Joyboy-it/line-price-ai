@@ -384,6 +384,7 @@ export interface OfferRow {
   factory_price: string;
   price_markup: string;
   profit_deduction: string;
+  old_price: string | null;
   po_number: string | null;
   delivery_note_number: string | null;
   form_id: string | null;
@@ -419,6 +420,7 @@ export async function listOffers(factoryId?: string): Promise<OfferRow[]> {
        a.id AS agent_id, a.name AS agent_name, a.sort_order AS agent_sort_order, ao.sheet_order,
        ao.price::text AS price, ao.factory_price::text AS factory_price,
        ao.price_markup::text AS price_markup, ao.profit_deduction::text AS profit_deduction,
+       ao.old_price::text AS old_price,
        ao.po_number, ao.delivery_note_number,
        ao.form_id, ff.name AS form_name, COALESCE(ff.file_name, ao.form_file_name) AS form_file_name,
        ao.is_active, ${iso('ao.updated_at')} AS updated_at
@@ -490,6 +492,8 @@ export async function upsertOffer(
     factoryPrice?: number;
     priceMarkup?: number;
     profitDeduction?: number;
+    /** undefined keeps the stored value. null clears it. */
+    oldPrice?: number | null;
     poNumber: string | null;
     deliveryNoteNumber: string | null;
     /** null keeps the form already linked to this offer. */
@@ -511,12 +515,13 @@ export async function upsertOffer(
   const sheetOrder = explicitOrder
     ? input.sheetOrder
     : (await client.query<{ n: number }>('SELECT COALESCE(MAX(sheet_order), 0) + 1 AS n FROM agent_offers')).rows[0].n;
+  const oldPriceProvided = input.oldPrice !== undefined;
   const result = await client.query<{ id: string; inserted: boolean }>(
     `INSERT INTO agent_offers (
        product_id, agent_id, price, factory_price, price_markup, profit_deduction,
-       po_number, delivery_note_number, form_id, sheet_order
+       po_number, delivery_note_number, form_id, sheet_order, old_price
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $12)
      ON CONFLICT (product_id, agent_id) DO UPDATE SET
        price = EXCLUDED.price,
        factory_price = EXCLUDED.factory_price,
@@ -525,9 +530,10 @@ export async function upsertOffer(
        po_number = COALESCE(EXCLUDED.po_number, agent_offers.po_number),
        delivery_note_number = COALESCE(EXCLUDED.delivery_note_number, agent_offers.delivery_note_number),
        form_id = COALESCE(EXCLUDED.form_id, agent_offers.form_id),
-       sheet_order = CASE WHEN $11 THEN EXCLUDED.sheet_order ELSE agent_offers.sheet_order END
+       sheet_order = CASE WHEN $11 THEN EXCLUDED.sheet_order ELSE agent_offers.sheet_order END,
+       old_price = CASE WHEN $13 THEN EXCLUDED.old_price ELSE agent_offers.old_price END
      RETURNING id, (xmax = 0) AS inserted`,
-    [productId, agentId, input.price, factoryPrice, priceMarkup, profitDeduction, input.poNumber, input.deliveryNoteNumber, form?.rows[0]?.id ?? null, sheetOrder, explicitOrder]
+    [productId, agentId, input.price, factoryPrice, priceMarkup, profitDeduction, input.poNumber, input.deliveryNoteNumber, form?.rows[0]?.id ?? null, sheetOrder, explicitOrder, input.oldPrice ?? null, oldPriceProvided]
   );
   return result.rows[0];
 }

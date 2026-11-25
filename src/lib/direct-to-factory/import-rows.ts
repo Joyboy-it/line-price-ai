@@ -10,6 +10,8 @@ export interface ParsedOfferRow {
   factoryPrice: number;
   priceMarkup: number;
   profitDeduction: number;
+  /** undefined = column absent, keep stored; null = clear */
+  oldPrice?: number | null;
   /** null = keep the value already stored */
   poNumber: string | null;
   /** null = keep the value already stored */
@@ -31,6 +33,7 @@ export const OFFER_SHEET_HEADERS = [
   'ราคาบวกเพิ่ม',
   'หักส่วนต่างกำไร',
   'ราคาล่าสุด',
+  'ราคาเก่า',
   'เลข PO',
   'เลขใบนำส่ง',
   'ชื่อแบบฟอร์ม',
@@ -43,6 +46,7 @@ const COLUMNS = {
   factoryPrice: 'ราคาโรงงาน',
   priceMarkup: 'ราคาบวกเพิ่ม',
   profitDeduction: 'หักส่วนต่างกำไร',
+  oldPrice: 'ราคาเก่า',
   price: 'ราคาล่าสุด',
   poNumber: 'เลข PO',
   deliveryNoteNumber: 'เลขใบนำส่ง',
@@ -58,6 +62,7 @@ export interface OfferSheetSource {
   factoryPrice: string;
   priceMarkup: string;
   profitDeduction: string;
+  oldPrice: string | null;
   poNumber: string | null;
   deliveryNoteNumber: string | null;
   formName: string | null;
@@ -78,6 +83,7 @@ export function writeOfferSheet(sheet: ExcelJS.Worksheet, offers: OfferSheetSour
     const factoryPrice = Number(offer.factoryPrice);
     const markup = Number(offer.priceMarkup);
     const deduction = Number(offer.profitDeduction);
+    const oldPrice = offer.oldPrice != null && offer.oldPrice.trim() !== '' ? Number(offer.oldPrice) : null;
     const row = sheet.addRow([
       offer.factoryName,
       offer.productName,
@@ -86,6 +92,7 @@ export function writeOfferSheet(sheet: ExcelJS.Worksheet, offers: OfferSheetSour
       markup,
       deduction,
       null,
+      oldPrice,
       offer.poNumber ?? '',
       offer.deliveryNoteNumber ?? '',
       offer.formName ?? '',
@@ -176,6 +183,20 @@ export function parseOfferRows(rows: string[][]): { rows: ParsedOfferRow[]; erro
       profitDeduction = 0;
     }
 
+    let oldPrice: number | null | undefined;
+    if (index.oldPrice === -1) {
+      oldPrice = undefined;
+    } else if (cell('oldPrice') === '') {
+      oldPrice = null;
+    } else {
+      const parsedOldPrice = priceNumber(cell('oldPrice'));
+      if (parsedOldPrice === null) {
+        errors.push({ line, message: `ราคาไม่ถูกต้อง: ${cell('oldPrice')}` });
+        return;
+      }
+      oldPrice = parsedOldPrice;
+    }
+
     const factoryName = cell('factoryName');
     const productName = cell('productName');
     const agentName = cell('agentName');
@@ -196,6 +217,7 @@ export function parseOfferRows(rows: string[][]): { rows: ParsedOfferRow[]; erro
       factoryPrice,
       priceMarkup,
       profitDeduction,
+      oldPrice,
       poNumber: cell('poNumber') || null,
       deliveryNoteNumber: cell('deliveryNoteNumber') || null,
       formName: cell('formName') || null,
